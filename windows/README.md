@@ -22,8 +22,12 @@ Requires: Rust, Windows SDK. Wintun DLL is fetched automatically by the `wintun`
 cargo run -p iran-vpn-windows --release
 ```
 
-**Demo mode (Wintun TUN only, no real backend):** `IRAN_VPN_DEMO=1 cargo run -p iran-vpn-windows --release`
+Place `psiphon-tunnel-core` and/or `xray` on PATH. Connect races paths, probes via SOCKS, then brings up Wintun.
+
+**Demo (no binaries):** `IRAN_VPN_DEMO=1 cargo run -p iran-vpn-windows --release`
+
+UI connect is non-blocking. Advanced panel accepts VLESS/VMess/Trojan share links.
 
 ## Distribution
 
-US-005: ship installer via GitHub Releases and at least one mirror. Use WiX or NSIS for installer.
+US-005: GitHub Releases + mirror. See [docs/distribution.md](../docs/distribution.md).

@@ -8,7 +8,7 @@
 // ==========================================
 PRODUCT_NAME = IranVPN
 PRODUCT_DISPLAY_NAME = Iran VPN
-PRODUCT_BUNDLE_IDENTIFIER = org.opensignalfoundation.iranvpn
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
 
@@ -18,9 +18,10 @@ CURRENT_PROJECT_VERSION = 1
 MACOSX_DEPLOYMENT_TARGET = 15.4
 
 // ==========================================
-// Info PLIST
+// Info PLIST / Assets
 // ==========================================
 GENERATE_INFOPLIST_FILE = YES
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 
 // ==========================================
 // Entitlements

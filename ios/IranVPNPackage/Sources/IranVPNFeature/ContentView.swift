@@ -1,11 +1,11 @@
+import NetworkExtension
 import SwiftUI
 
-/// US-001: Zero-config Connect/Disconnect. US-008: Legal disclaimer on first launch.
+/// US-001: Zero-config Connect/Disconnect. Never fakes Connected — waits for VPN status.
+/// US-008: Legal disclaimer on first launch.
 public struct ContentView: View {
     @AppStorage("disclaimerAccepted") private var disclaimerAccepted = false
-    @State private var isConnected = false
-    @State private var isConnecting = false
-    @State private var activePath: String? = nil
+    @State private var vpn = VpnController()
 
     public init() {}
 
@@ -14,30 +14,12 @@ public struct ContentView: View {
             if !disclaimerAccepted {
                 LegalDisclaimerView(onAccept: { disclaimerAccepted = true })
             } else {
-                ConnectView(
-                    isConnected: isConnected,
-                    isConnecting: isConnecting,
-                    activePath: activePath,
-                    onConnect: connect,
-                    onDisconnect: disconnect
-                )
+                ConnectView(vpn: vpn)
             }
         }
-    }
-
-    private func connect() {
-        isConnecting = true
-        // TODO: Request VPN permission, start NEPacketTunnelProvider with core fallback engine
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            isConnecting = false
-            isConnected = true
-            activePath = "Psiphon"
+        .task {
+            await vpn.refreshStatus()
         }
-    }
-
-    private func disconnect() {
-        isConnected = false
-        activePath = nil
     }
 }
 
@@ -47,16 +29,16 @@ struct LegalDisclaimerView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Text("Legal Notice")
+                Text("اطلاعیه قانونی / Legal Notice")
                     .font(.headline)
                     .fontWeight(.bold)
                 Text("Unauthorized VPN use is illegal in Iran (Supreme Council of Cyberspace, Feb 2024). This app is for research and informational use only. Users assume all legal and personal risks. We do not encourage illegal activity.")
                     .font(.body)
                     .multilineTextAlignment(.center)
-                Text("Security: Use DNS-over-HTTPS when possible; avoid public Wi-Fi; keep the app updated.")
+                Text("Security: Prefer tunneled DNS; avoid public Wi-Fi; keep the app updated.")
                     .font(.caption)
                     .multilineTextAlignment(.center)
-                Button("I understand and accept the risks", action: onAccept)
+                Button("می‌پذیرم / I understand and accept the risks", action: onAccept)
                     .buttonStyle(.borderedProminent)
             }
             .padding(24)
@@ -66,31 +48,52 @@ struct LegalDisclaimerView: View {
 }
 
 struct ConnectView: View {
-    let isConnected: Bool
-    let isConnecting: Bool
-    let activePath: String?
-    let onConnect: () -> Void
-    let onDisconnect: () -> Void
-
-    private var statusText: String {
-        if isConnecting { return "Connecting…" }
-        if isConnected {
-            return activePath != nil ? "Connected via \(activePath!)" : "Connected"
-        }
-        return "Disconnected"
-    }
+    @Bindable var vpn: VpnController
+    @State private var shareLink = ""
+    @State private var showAdvanced = false
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(statusText)
+            Text(vpn.statusText)
                 .font(.headline)
-            if isConnecting {
+            if vpn.isConnecting {
                 ProgressView()
-            } else if isConnected {
-                Button("Disconnect", action: onDisconnect)
+            } else if vpn.isConnected {
+                Button("قطع اتصال / Disconnect") {
+                    Task { await vpn.disconnect() }
+                }
             } else {
-                Button("Connect", action: onConnect)
+                Button("اتصال / Connect") {
+                    Task { await vpn.connect() }
+                }
             }
+            if let err = vpn.errorMessage {
+                Text(err)
+                    .foregroundStyle(.red)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            Button(showAdvanced ? "پنهان کردن پیشرفته" : "پیشرفته / Advanced") {
+                showAdvanced.toggle()
+            }
+            .buttonStyle(.borderless)
+            if showAdvanced {
+                TextField("vless:// / vmess:// / trojan://", text: $shareLink, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(2...4)
+                    .padding(.horizontal)
+                Button("Import share link") {
+                    vpn.importedShareLink = shareLink.trimmingCharacters(in: .whitespacesAndNewlines)
+                    shareLink = ""
+                }
+                .disabled(shareLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            Text("Conduit P2P is not available as an iOS station; Psiphon direct + imported Xray only.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

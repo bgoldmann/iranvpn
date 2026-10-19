@@ -3,18 +3,17 @@ package org.opensignalfoundation.iranvpn.fallback
 import org.opensignalfoundation.iranvpn.model.PathConfig
 
 /**
- * PathRunner for Conduit (P2P volunteer relay). Conduit is built into Psiphon SDK;
- * when PsiphonPathRunner connects, Conduit discovery/stations are used automatically.
- * This runner is for Conduit-only configs when not using Psiphon.
+ * Conduit is built into the Psiphon SDK — do not use this as a standalone path.
+ * Kept for config compatibility; always redirects callers to use Psiphon.
  */
 class ConduitPathRunner : PathRunner {
     override fun connect(config: PathConfig): PathResult {
-        if (config !is PathConfig.ConduitConfig) return PathResult.Failure("wrong config type")
-        // Conduit discovery_url → fetch station list → connect as P2P. Psiphon includes this.
-        return PathResult.Failure("Conduit standalone pending - use Psiphon path (includes Conduit)")
+        return PathResult.Failure(
+            "Conduit is included in Psiphon — use the Psiphon path (zero-config includes Conduit P2P)"
+        )
     }
 
     override fun disconnect() {
-        // TODO: Disconnect from Conduit station
+        // no-op
     }
 }

@@ -2,8 +2,7 @@ package org.opensignalfoundation.iranvpn
 
 /**
  * JNI bridge to iran-vpn-core (Rust).
- * Requires libiran_vpn_core.so built for Android with `cargo build --target aarch64-linux-android --features jni`.
- * Loads lazily; if load fails, ConfigFetcher uses Java HTTP fallback.
+ * Requires libiran_vpn_core.so built with `--features jni`.
  */
 object Native {
     @Volatile
@@ -25,10 +24,15 @@ object Native {
         return loadError == null
     }
 
-    /**
-     * Fetch server list from redundant sources.
-     * @param sourcesJson JSON array of ConfigSource: [{"url":"...","label":"..."}]
-     * @return JSON ServerList or throws on failure
-     */
+    /** Fetch server list from redundant sources. */
     external fun fetchServerList(sourcesJson: String): String
+
+    /** Bootstrap: last-good from cacheDir or embedded. */
+    external fun bootstrapServerList(cacheDir: String): String
+
+    /** Embedded Psiphon-only bootstrap JSON. */
+    external fun embeddedServerList(): String
+
+    /** Probe via SOCKS; returns 1 on success, 0 on failure. */
+    external fun probeSocks(socksPort: Int): Int
 }

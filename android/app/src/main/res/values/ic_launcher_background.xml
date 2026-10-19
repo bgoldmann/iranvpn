@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Deep navy matching the icon globe / neon frame -->
+    <color name="ic_launcher_background">#0A1A3A</color>
+</resources>

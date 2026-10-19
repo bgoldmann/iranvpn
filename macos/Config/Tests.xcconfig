@@ -7,7 +7,7 @@
 // ==========================================
 // Test Target Settings (Customizable by scaffold tool)
 // ==========================================
-PRODUCT_BUNDLE_IDENTIFIER = org.opensignalfoundation.iranvpn
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tests
 TEST_TARGET_NAME = IranVPN
 
 // Fix duplicate module name issue

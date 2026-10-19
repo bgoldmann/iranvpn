@@ -1,0 +1,28 @@
+# Build / deps
+target/
+**/build/
+**/.gradle/
+**/.cxx/
+**/DerivedData/
+**/xcuserdata/
+*.xcuserstate
+
+# Local secrets & machine paths
+android/local.properties
+**/local.properties
+*.jks
+*.keystore
+.env
+.env.*
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# iOS vendored tunnel frameworks (~540MB) — fetch via scripts/fetch-ios-tunnel-deps.sh
+ios/Vendor/PsiphonTunnel.xcframework/
+ios/Vendor/LibXray.xcframework/
+
+# Large duplicate of branding asset (canonical copy under assets/branding/)
+/IranVPN Lion and Sun Cyber Shield.png

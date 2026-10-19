@@ -1,48 +1,48 @@
 # Config distribution (FR-8)
 
-Server list and path configs must be fetched from **redundant or decentralized** sources so a single block does not break zero-config.
+Server list and path configs must be fetchable from **redundant** sources.
+Clients **must not** depend on a live fetch for first Connect — they ship an
+embedded Psiphon bootstrap and a last-good cache.
 
 ## Sources
 
-- **Primary:** S3 or similar (e.g. Psiphon-style distribution).
-- **Mirror:** Second URL (different domain) serving the same JSON.
-- **Optional:** GitHub raw, IPFS, or community mirror.
+- **Primary:** GitHub raw / S3
+- **Mirror:** jsDelivr or second domain
+- **Optional:** IPFS / community mirror
 
 ## Format
-
-`core` expects a JSON `ServerList`:
 
 ```json
 {
   "paths": [
-    { "type": "psiphon", "server_list_url": "https://..." },
-    { "type": "conduit", "discovery_url": "https://..." }
+    { "type": "psiphon", "server_list_url": null },
+    { "type": "xray", "config_json": "{...}", "subscription_url": null }
   ],
   "sources": [
-    { "url": "https://mirror1.example.com/config.json", "label": "Mirror 1" },
-    { "url": "https://mirror2.example.com/config.json", "label": "Mirror 2" }
+    { "url": "https://mirror1.example.com/config.json", "label": "Mirror 1" }
   ]
+}
+```
+
+Optional signed envelope (when Ed25519 verify key is set in the client):
+
+```json
+{
+  "payload": { "paths": [...], "sources": [...] },
+  "signature": "<base64 ed25519 signature over payload JSON>"
 }
 ```
 
 ## Scripts
 
-- `publish.sh` — upload server-list.json to S3 and/or mirror:
-  ```bash
-  # S3: set S3_BUCKET, optionally S3_PREFIX
-  export S3_BUCKET=my-vpn-config
-  # Mirror: set MIRROR_URL, optionally MIRROR_AUTH
-  export MIRROR_URL=https://mirror.example.com/config.json
-  ./publish.sh [server-list.json]
-  ```
-- Clients use `fetch_server_list(sources)` and try each URL until one succeeds.
+```bash
+export S3_BUCKET=my-vpn-config
+export MIRROR_URL=https://mirror.example.com/config.json
+./publish.sh [server-list.json]
+```
 
-## Default ConfigSource URLs (core)
+## Client order
 
-Zero-config clients fetch from, in order:
-1. `https://raw.githubusercontent.com/opensignalfoundation/iran-vpn/main/dist-config/server-list.json`
-2. `https://primary.example.com/config.json` (replace with your mirror)
-
-## US-005
-
-Installers and updates should also use ≥2 distribution channels (GitHub Releases + mirror); this folder is for **config** distribution only.
+1. Last-good cache  
+2. Embedded bootstrap (`psiphon` only)  
+3. Network fetch (prefer via SOCKS after connect)

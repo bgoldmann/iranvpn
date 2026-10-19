@@ -61,7 +61,10 @@ Java_org_opensignalfoundation_iranvpn_tunnel_Tun2SocksNative_nativeStartTun2Sock
     int c_arguments_size = 0;
     for (int i = 0; i < argc; i++) {
         jstring s = (jstring)env->GetObjectArrayElement(args, i);
-        c_arguments_size += strlen(env->GetStringUTFChars(s, nullptr)) + 1;
+        const char* utf = env->GetStringUTFChars(s, nullptr);
+        c_arguments_size += static_cast<int>(strlen(utf)) + 1;
+        env->ReleaseStringUTFChars(s, utf);
+        env->DeleteLocalRef(s);
     }
     char* args_buffer = (char*)calloc(c_arguments_size, sizeof(char));
     std::vector<char*> argv(static_cast<size_t>(argc));

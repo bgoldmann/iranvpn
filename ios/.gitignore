@@ -1,3 +1,7 @@
+# Large binary frameworks (run scripts/fetch-ios-tunnel-deps.sh)
+Vendor/PsiphonTunnel.xcframework/
+Vendor/LibXray.xcframework/
+
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore

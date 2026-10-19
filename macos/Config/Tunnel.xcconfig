@@ -1,0 +1,4 @@
+// Network Extension Packet Tunnel — embed as PlugIn with this bundle ID.
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel
+PRODUCT_NAME = IranVPNTunnel
+SKIP_INSTALL = YES

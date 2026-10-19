@@ -1,0 +1,29 @@
+// Network Extension Packet Tunnel (LibXray) — separate process from Psiphon (Go runtime).
+// Requires: scripts/fetch-ios-tunnel-deps.sh → ios/Vendor/LibXray.xcframework
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel.xray
+PRODUCT_NAME = IranVPNTunnelXray
+PRODUCT_DISPLAY_NAME = Iran VPN Xray
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+SKIP_INSTALL = YES
+GENERATE_INFOPLIST_FILE = NO
+INFOPLIST_FILE = IranVPNTunnel/Info-Xray.plist
+CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel.entitlements
+CODE_SIGN_STYLE = Automatic
+IPHONEOS_DEPLOYMENT_TARGET = 18.4
+TARGETED_DEVICE_FAMILY = 1,2
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+SWIFT_VERSION = 5.0
+SWIFT_EMIT_LOC_STRINGS = YES
+APPLICATION_EXTENSION_API_ONLY = YES
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) PATH_XRAY
+
+LIBRARY_SEARCH_PATHS[sdk=iphoneos*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64
+LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64_x86_64-simulator
+HEADER_SEARCH_PATHS[sdk=iphoneos*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64/Headers
+HEADER_SEARCH_PATHS[sdk=iphonesimulator*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64_x86_64-simulator/Headers
+SWIFT_INCLUDE_PATHS[sdk=iphoneos*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64/Headers
+SWIFT_INCLUDE_PATHS[sdk=iphonesimulator*] = $(inherited) $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64_x86_64-simulator/Headers
+OTHER_LDFLAGS[sdk=iphoneos*] = $(inherited) -force_load $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64/libXray.a -lresolv
+OTHER_LDFLAGS[sdk=iphonesimulator*] = $(inherited) -force_load $(PROJECT_DIR)/Vendor/LibXray.xcframework/ios-arm64_x86_64-simulator/libXray.a -lresolv
+OTHER_LDFLAGS = $(inherited) -framework Network -framework Security -framework CoreFoundation -framework Foundation

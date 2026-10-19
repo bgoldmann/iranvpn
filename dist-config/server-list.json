@@ -1,0 +1,15 @@
+{
+  "paths": [
+    { "type": "psiphon", "server_list_url": null }
+  ],
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/opensignalfoundation/iran-vpn/main/dist-config/server-list.json",
+      "label": "Primary (GitHub)"
+    },
+    {
+      "url": "https://cdn.jsdelivr.net/gh/opensignalfoundation/iran-vpn@main/dist-config/server-list.json",
+      "label": "Mirror (jsDelivr)"
+    }
+  ]
+}

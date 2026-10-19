@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [4.0.0] — 2026-10-19
+
+### Anti-filter VPN rebuild
+
+- **Android:** TUN correctness — `protect`/disallowed app, MTU 1280, TUN-local DNS, IPv6, kill switch, `allowBackup=false`, probe-before-Connected; Psiphon SDK linked with HostService protect; Conduit folded into Psiphon; Xray share-link/REALITY import; encrypted/wiped config files; local failure metrics.
+- **Core:** Parallel race engine (~8s), probe gate, warm spare, health loop, exponential backoff; signed/embedded bootstrap + last-good cache; real DoH (SOCKS-capable); C FFI + expanded JNI.
+- **Windows:** Non-blocking UI, Psiphon/Xray SOCKS race, probe gate, Wintun kill switch.
+- **iOS/macOS:** Stop fake Connected; `NETunnelProviderManager` + PacketTunnelProvider probe/kill-switch; Persian UI strings.
+- **Station/distribution:** Conduit launcher script; dual-channel distribution docs; embedded `server-list.json`.
+
 ## [3.0.9] — 2026-02-08
 
 ### Added

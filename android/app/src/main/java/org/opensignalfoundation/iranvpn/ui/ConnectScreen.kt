@@ -4,12 +4,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,28 +26,40 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * US-001: Zero-config connection — single Connect/Disconnect; clear status.
- * Shows active path (Psiphon/Conduit/Xray/Rostam) when connected.
+ * US-001: Zero-config Connect/Disconnect.
+ * Advanced: paste VLESS/VMess/Trojan share link or subscription URL.
+ * Persian-first status strings with English fallback labels.
  */
 @Composable
 fun ConnectScreen(
     isConnected: Boolean,
     activePath: String? = null,
+    isConnecting: Boolean = false,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
+    onImportShareLink: ((String) -> Unit)? = null,
 ) {
-    var isConnecting by remember { mutableStateOf(false) }
+    var showAdvanced by remember { mutableStateOf(false) }
+    var shareLink by remember { mutableStateOf("") }
+    var importMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = when {
-                isConnecting -> "Connecting…"
-                isConnected -> if (activePath != null) "Connected via $activePath" else "Connected"
-                else -> "Disconnected"
+                isConnecting -> "در حال اتصال… / Connecting…"
+                isConnected -> if (activePath != null) {
+                    "متصل از طریق $activePath / Connected via $activePath"
+                } else {
+                    "متصل / Connected"
+                }
+                else -> "قطع / Disconnected"
             },
             style = MaterialTheme.typography.headlineSmall
         )
@@ -50,13 +68,51 @@ fun ConnectScreen(
             CircularProgressIndicator(Modifier.size(48.dp))
         } else {
             if (isConnected) {
-                Button(onClick = onDisconnect) { Text("Disconnect") }
+                Button(onClick = onDisconnect) {
+                    Text("قطع اتصال / Disconnect")
+                }
             } else {
-                Button(onClick = {
-                    isConnecting = true
-                    onConnect()
-                    isConnecting = false
-                }) { Text("Connect") }
+                Button(onClick = onConnect) {
+                    Text("اتصال / Connect")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+        TextButton(onClick = { showAdvanced = !showAdvanced }) {
+            Text(if (showAdvanced) "پنهان کردن پیشرفته" else "پیشرفته / Advanced")
+        }
+
+        if (showAdvanced && onImportShareLink != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "VLESS / VMess / Trojan / subscription URL",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedTextField(
+                value = shareLink,
+                onValueChange = { shareLink = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Share link") },
+                singleLine = false,
+                minLines = 2,
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    val trimmed = shareLink.trim()
+                    if (trimmed.isNotEmpty()) {
+                        onImportShareLink(trimmed)
+                        importMessage = "Imported — will be tried with Connect"
+                        shareLink = ""
+                    }
+                },
+                enabled = shareLink.isNotBlank() && !isConnected
+            ) {
+                Text("Import")
+            }
+            importMessage?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

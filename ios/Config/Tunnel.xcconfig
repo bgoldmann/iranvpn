@@ -1,0 +1,25 @@
+// Network Extension Packet Tunnel (Psiphon) — embed as PlugIn with this bundle ID.
+// Requires: scripts/fetch-ios-tunnel-deps.sh → ios/Vendor/PsiphonTunnel.xcframework
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel
+PRODUCT_NAME = IranVPNTunnel
+PRODUCT_DISPLAY_NAME = Iran VPN Tunnel
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+SKIP_INSTALL = YES
+GENERATE_INFOPLIST_FILE = NO
+INFOPLIST_FILE = IranVPNTunnel/Info.plist
+CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel.entitlements
+CODE_SIGN_STYLE = Automatic
+IPHONEOS_DEPLOYMENT_TARGET = 18.4
+TARGETED_DEVICE_FAMILY = 1,2
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+SWIFT_VERSION = 5.0
+SWIFT_EMIT_LOC_STRINGS = YES
+APPLICATION_EXTENSION_API_ONLY = YES
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) PATH_PSIPHON
+// Point -F at the matching XCFramework slice so `import PsiphonTunnel` resolves.
+FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*] = $(inherited) $(PROJECT_DIR)/Vendor/PsiphonTunnel.xcframework/ios-arm64
+FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*] = $(inherited) $(PROJECT_DIR)/Vendor/PsiphonTunnel.xcframework/ios-arm64_x86_64-simulator
+OTHER_LDFLAGS = $(inherited) -framework PsiphonTunnel
+
+

@@ -4,15 +4,26 @@ Swift + SwiftUI app; uses `core` as static lib or XCFramework. Tunnel via Networ
 
 ## Setup
 
-1. Open `IranVPN.xcworkspace` in Xcode.
-2. Add Network Extension target: File → New → Target → Network Extension → Packet Tunnel Provider. Name it `IranVPNTunnel`. Copy `IranVPNTunnel/PacketTunnelProvider.swift` into the new target.
-3. Build Rust `core` for `aarch64-apple-ios` and `x86_64-apple-ios`; produce XCFramework, embed in the app.
-4. Main app: Connect/Disconnect starts/stops `NETunnelProviderManager` configured for our Packet Tunnel.
-5. Dependencies: Psiphon (CocoaPods/SPM), XrayKit, Rostam/WireGuardKit.
+1. Fetch tunnel binaries (gitignored, ~540MB):
+   ```bash
+   ./scripts/fetch-ios-tunnel-deps.sh
+   ```
+   Places `ios/Vendor/PsiphonTunnel.xcframework` and `ios/Vendor/LibXray.xcframework`.
+2. Open `IranVPN.xcworkspace` in Xcode.
+3. Two Packet Tunnel extensions are embedded (separate processes — both frameworks ship a Go runtime):
+   - `IranVPNTunnel` → `com.goldmannllc.IranVPN.tunnel` (Psiphon, zero-config)
+   - `IranVPNTunnelXray` → `com.goldmannllc.IranVPN.tunnel.xray` (LibXray, share links)
+4. Enable Network Extensions (Packet Tunnel) on the App ID and both extension IDs for your team.
+5. Connect uses `NETunnelProviderManager` and **never** reports Connected until system VPN status is `.connected`. With an imported share link, the host selects the Xray extension; otherwise Psiphon.
+6. Store checklist: `PrivacyInfo.xcprivacy`, App Icon asset catalog, encryption export compliance (`ITSAppUsesNonExemptEncryption`), App Group `group.com.goldmannllc.IranVPN`.
 
 ## Conduit on iOS
 
-Conduit iOS support is planned; until then, iOS may use Psiphon direct and Xray/Rostam only in the fallback chain.
+Conduit station is **not** available on iOS. Users get Psiphon direct + imported Xray share links only.
+
+## Probe and kill switch
+
+`PacketTunnelProvider` requires a live SOCKS port and a TCP probe before installing network settings. Without a forwarder, packets are dropped (kill switch) — not leaked to the ISP.
 
 ## Capabilities
 

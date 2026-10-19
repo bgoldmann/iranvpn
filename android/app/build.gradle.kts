@@ -4,18 +4,21 @@ plugins {
 }
 android {
     namespace = "org.opensignalfoundation.iranvpn"
-    compileSdk = 34
+    compileSdk = 35
     defaultConfig {
         applicationId = "org.opensignalfoundation.iranvpn"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++11"
                 arguments += "-DANDROID_STL=c++_static"
             }
+        }
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
     }
     externalNativeBuild {
@@ -25,14 +28,42 @@ android {
         }
     }
     ndkVersion = "26.1.10909125"
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("IRANVPN_KEYSTORE") ?: project.findProperty("IRANVPN_KEYSTORE") as String?
+            val storePasswordValue = System.getenv("IRANVPN_KEYSTORE_PASSWORD") ?: project.findProperty("IRANVPN_KEYSTORE_PASSWORD") as String?
+            val keyAliasValue = System.getenv("IRANVPN_KEY_ALIAS") ?: project.findProperty("IRANVPN_KEY_ALIAS") as String?
+            val keyPasswordValue = System.getenv("IRANVPN_KEY_PASSWORD") ?: project.findProperty("IRANVPN_KEY_PASSWORD") as String?
+            if (storeFilePath != null && storePasswordValue != null && keyAliasValue != null && keyPasswordValue != null) {
+                storeFile = file(storeFilePath)
+                storePassword = storePasswordValue
+                keyAlias = keyAliasValue
+                keyPassword = keyPasswordValue
+            }
+        }
+    }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
+                ?: signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+    // lintVitalAnalyzeRelease currently crashes with AGP/Gradle toolchain mismatch ("25.0.1").
+    // Keep assembling release APKs; re-enable after AGP/lint alignment.
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -40,11 +71,11 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.5" }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }
 }
 dependencies {
-    // Psiphon: uncomment when Maven repo resolves (Java 17 recommended for Android builds)
-    // implementation("ca.psiphon:psiphontunnel:2.0.35")
+    // Psiphon Tunnel Core (includes Conduit). HostService.protectSocket avoids TUN loop.
+    implementation("ca.psiphon:psiphontunnel:2.0.35")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

@@ -8,7 +8,7 @@
 // ==========================================
 PRODUCT_NAME = IranVPN
 PRODUCT_DISPLAY_NAME = Iran VPN
-PRODUCT_BUNDLE_IDENTIFIER = org.opensignalfoundation.iranvpn
+PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
 
@@ -26,6 +26,10 @@ TARGETED_DEVICE_FAMILY = 1,2
 GENERATE_INFOPLIST_FILE = YES
 INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait
 INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+// VPN uses cryptography beyond HTTPS-only exemptions — declare in App Store Connect.
+INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = YES
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+
 
 // ==========================================
 // Entitlements

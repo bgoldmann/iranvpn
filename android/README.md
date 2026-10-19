@@ -8,30 +8,40 @@ Android app with fallback chain (Psiphon → Conduit → Xray → Rostam).
 2. **tun2socks prebuilts (required):** From project root, run `./scripts/fetch-tun2socks-prebuilt.sh` to download badvpn-tun2socks libs. Run once before first build.
 3. **Rust core (optional):** From project root, run `./scripts/build-android-core.sh` to build the native library. Without it, config fetch uses Java HTTP.
 4. **Open in Android Studio** or run `./gradlew assembleDebug`.
+5. **Release / Play:** `./gradlew assembleRelease bundleRelease`. For Play signing set `IRANVPN_KEYSTORE`, `IRANVPN_KEYSTORE_PASSWORD`, `IRANVPN_KEY_ALIAS`, `IRANVPN_KEY_PASSWORD` (env or `gradle.properties`). Without them, release still builds but is signed with the debug keystore.
+6. **Play Console:** declare `FOREGROUND_SERVICE_SPECIAL_USE` (VPN), Data safety form, privacy policy URL, and VPN app category questionnaire.
 
-Build uses Gradle 9.3.1 and AGP 8.7.2; compatible with Java 17–25.
+`targetSdk` / `compileSdk` = 35, `versionName` = 1.0.0. Build uses Gradle 9.3.1 and AGP 8.7.2; compatible with Java 17–25.
 
 ## Psiphon integration
 
-PsiphonPathRunner uses reflection so the app builds and runs without the Psiphon SDK. To enable full Psiphon:
+Psiphon Tunnel Core is enabled in `app/build.gradle.kts` (`ca.psiphon:psiphontunnel`).
+`PsiphonPathRunner` implements `HostService.protectSocket` via `VpnService.protect()` so
+bridge sockets do not loop into TUN. Conduit P2P is included inside Psiphon — there is
+no separate Conduit path.
 
-1. Uncomment in `app/build.gradle.kts`:
-   ```kotlin
-   implementation("ca.psiphon:psiphontunnel:2.0.35")
-   ```
-2. The Psiphon Maven repo is already in `settings.gradle.kts`.
-3. Build with Java 17 for best compatibility.
-
-Without the dependency, selecting Psiphon path returns "Psiphon SDK not on classpath".
+Build with Java 17+.
 
 ## Xray integration
 
-XrayPathRunner runs xray as a subprocess. Add the xray binary to assets:
+Prefer LibXray AAR when available. Fallback: place binary in assets:
 
-- `assets/xray/xray` (single binary), or
-- `assets/xray/<abi>/xray` (e.g. `assets/xray/arm64-v8a/xray`)
+- `assets/xray/xray`, or
+- `assets/xray/<abi>/xray`
 
-Download from [Xray-core releases](https://github.com/XTLS/Xray-core/releases); extract the appropriate binary. Config is written from `PathConfig.XrayConfig`; supports subscription URL fetch.
+Supports VLESS+REALITY / xHTTP share links (Advanced screen). Config is written under
+`noBackupFilesDir` and wiped after process start — not left cleartext in cache.
+
+## Tunnel correctness
+
+- MTU 1280; TUN-local DNS `198.18.0.2`; IPv6 routed into tunnel
+- `addDisallowedApplication(packageName)` to prevent TUN loop
+- Psiphon `HostService.loadLibrary` + `bindToDevice(long)` → `VpnService.protect`
+- Probe gate (HTTPS token via SOCKS) before Connected
+- Kill switch: no SOCKS ⇒ drop packets, never claim Connected
+- Foreground service type: `specialUse` (VPN subtype)
+- `allowBackup=false`
+- UI polls service `isConnected` / `isConnecting` so Connect status stays in sync
 
 ## Packet forwarding (tun2socks)
 

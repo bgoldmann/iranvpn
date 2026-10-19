@@ -1,32 +1,51 @@
 # Volunteer P2P station (US-004)
 
-One-click or minimal-step install for a **Conduit-style** relay so volunteers (diaspora or allies) can share bandwidth with users in Iran.
+This project does **not** invent a new P2P overlay. Volunteers should run the
+official **Psiphon Conduit** station. This folder provides a thin launcher and
+docs so diaspora/allies can share bandwidth with users in Iran.
 
-## Components
+## Official Conduit
 
-- **Conduit** ([Psiphon-Inc/conduit](https://github.com/Psiphon-Inc/conduit)): run as station; traffic is end-to-end encrypted so volunteers cannot see content.
-- This folder: wrapper or launcher with minimal config, optional small UI for status.
+| Resource | URL |
+|----------|-----|
+| Website | https://conduit.psiphon.ca/ |
+| GitHub | https://github.com/Psiphon-Inc/conduit |
+| Security | Cure53 audit (see Conduit docs) |
 
-## Status UI (planned)
+Traffic is end-to-end encrypted; volunteers cannot see content.
 
-- Number of connected users
+## Quick start
+
+### Android / Windows / macOS
+
+1. Download Conduit from [conduit.psiphon.ca](https://conduit.psiphon.ca/) or GitHub Releases.
+2. Or run the helper script from this repo:
+
+```bash
+./station/launch-conduit.sh
+```
+
+3. Prefer stable home Wi‑Fi / unlimited data.
+4. Set bandwidth and battery limits in Conduit settings.
+
+### iOS
+
+Conduit iOS station support is **not available** yet (Psiphon roadmap).
+iOS users of Iran VPN use Psiphon direct + imported Xray only — not volunteer stations.
+
+## Status UI (planned wrapper)
+
+When wrapping Conduit, show:
+
+- Connected users
 - Throughput
-- Configurable bandwidth and battery limits (Android)
-- Link to Cure53 (or equivalent) security audit report for P2P components
+- Bandwidth / battery limits
+- Link to Cure53 audit
 
-## Platforms
+Until a wrapper ships, use Conduit’s own UI.
 
-- **Android:** background operation
-- **Windows, macOS:** desktop station
-- **iOS:** planned (Conduit iOS support is planned)
+## Why Conduit matters
 
-## Security
-
-- Cure53 or equivalent audit for P2P components (NFR-2).
-- Volunteers cannot see user traffic (encrypted).
-
-## Usage
-
-1. Install Conduit station (or this wrapper when built).
-2. Run; optionally set bandwidth/battery limits.
-3. Share the app with users; they connect via zero-config client which will use Conduit in the fallback chain.
+During severe Iran shutdowns, direct international routes may die. Conduit
+exploits volunteer egress that censors cannot fully close without collateral
+damage. In Jan 2026, a large share of Psiphon Iran traffic used Conduit.

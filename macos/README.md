@@ -5,11 +5,11 @@ Swift + SwiftUI app; uses `core` as static lib or XCFramework. Tunnel via NEPack
 ## Setup
 
 1. Open `IranVPN.xcworkspace` in Xcode.
-2. Add Network Extension target (Packet Tunnel Provider) for the VPN tunnel.
-3. Build Rust `core` for `aarch64-apple-darwin` and `x86_64-apple-darwin`; produce XCFramework.
-4. Dependencies: Psiphon (if available for macOS), XrayKit, Rostam/WireGuardKit.
-5. Enable Network Extensions and Packet Tunnel in Signing & Capabilities.
-6. Notarize for Gatekeeper; distribute via GitHub Releases + mirror (US-005).
+2. Network Extension: `macos/IranVPNTunnel/PacketTunnelProvider.swift` (same probe/kill-switch model as iOS).
+3. Build Rust `core` XCFramework (`core/src/ffi.rs` C ABI).
+4. UI never fakes Connected — waits for `NETunnelProviderManager` status.
+5. Enable Network Extensions; notarize for Gatekeeper.
+6. Distribute via GitHub Releases + mirror (see [docs/distribution.md](../docs/distribution.md)).
 
 ---
 

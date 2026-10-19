@@ -6,26 +6,24 @@ import java.nio.ByteBuffer
 import kotlin.concurrent.thread
 
 /**
- * Forwards TUN traffic. When socksPort > 0, uses tun2socks (badvpn) to route through SOCKS5.
- * When socksPort <= 0, runs a read loop that drops packets (for non-SOCKS paths).
+ * Forwards TUN traffic through SOCKS5 via tun2socks.
+ * Kill switch: if socksPort <= 0, drop all packets (do not claim connectivity).
  */
 object PacketForwarder {
 
-    private const val DEFAULT_MTU = 1500
-    private const val DEFAULT_NET_IPV4 = "10.0.0.2"
-    private const val DEFAULT_NETMASK = "255.255.255.0"
+    const val DEFAULT_MTU = 1280
+    const val DEFAULT_NET_IPV4 = "10.0.0.2"
+    const val DEFAULT_NETMASK = "255.255.255.0"
+
+    @Volatile
+    private var forwarding = false
+
+    val isForwarding: Boolean get() = forwarding
 
     /**
-     * Start forwarding. When socksPort > 0, runs tun2socks (blocking in background thread).
-     * When socksPort <= 0, runs read loop that drops packets.
+     * Start forwarding. Requires socksPort > 0; otherwise runs a drop loop (kill switch).
      *
-     * @param tunFd TUN file descriptor
-     * @param socksPort Local SOCKS5 port; 0 = no forwarding (drop packets)
-     * @param mtu Must match VpnService.Builder.setMtu()
-     * @param netIPv4 Must match VpnService.Builder.addAddress()
-     * @param netmask For tun2socks (e.g. 255.255.255.0 for /24)
-     * @param forwardUdp true if SOCKS5 server supports UDP (e.g. Xray)
-     * @param running Supplier returning false to stop
+     * @return false if socksPort was invalid (caller should treat as failed connect)
      */
     @JvmOverloads
     fun start(
@@ -36,13 +34,17 @@ object PacketForwarder {
         netmask: String = DEFAULT_NETMASK,
         forwardUdp: Boolean = false,
         running: () -> Boolean,
-    ) {
+    ): Boolean {
+        stop()
         if (socksPort <= 0) {
-            thread(name = "vpn-tun-read") {
-                runReadLoop(tunFd, running) { /* drop packets when no SOCKS */ }
+            // Kill switch: drop packets; never silently blackhole while claiming "connected"
+            forwarding = false
+            thread(name = "vpn-tun-killswitch") {
+                runReadLoop(tunFd, running) { /* drop */ }
             }
-            return
+            return false
         }
+        forwarding = true
         thread(name = "vpn-tun2socks") {
             try {
                 val exitCode = Tun2SocksNative.startTun2Socks(
@@ -54,23 +56,24 @@ object PacketForwarder {
                     netIPv6 = null,
                     netmask = netmask,
                     forwardUdp = forwardUdp,
-                    logLevel = 3, // NOTICE
+                    logLevel = 3,
                 )
+                forwarding = false
                 if (exitCode != 0 && running()) {
                     android.util.Log.w("PacketForwarder", "tun2socks exited with code $exitCode")
                 }
             } catch (e: Throwable) {
+                forwarding = false
                 if (running()) {
                     android.util.Log.e("PacketForwarder", "tun2socks failed", e)
                 }
             }
         }
+        return true
     }
 
-    /**
-     * Stop tun2socks. Call when disconnecting. Safe to call from any thread.
-     */
     fun stop() {
+        forwarding = false
         Tun2SocksNative.stopTun2Socks()
     }
 

@@ -1,14 +1,20 @@
 package org.opensignalfoundation.iranvpn.fallback
 
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeoutOrNull
+import org.opensignalfoundation.iranvpn.model.PathConfig
 import org.opensignalfoundation.iranvpn.model.PathKind
 import org.opensignalfoundation.iranvpn.model.ServerList
 
 /**
- * Kotlin implementation of fallback engine logic (mirrors core FallbackEngine).
- * Tries paths in order: Psiphon -> Conduit -> Xray -> Rostam.
+ * Races paths in parallel on Dispatchers.IO. First Success wins; other runners disconnect.
  */
 class FallbackOrchestrator(
     private val serverList: ServerList,
@@ -20,57 +26,89 @@ class FallbackOrchestrator(
     private val _events = MutableStateFlow<FallbackEvent?>(null)
     val events: Flow<FallbackEvent?> = _events.asStateFlow()
 
-    private val defaultOrder = listOf(PathKind.PSIPHON, PathKind.CONDUIT, PathKind.XRAY, PathKind.ROSTAM)
+    private val defaultOrder = listOf(PathKind.PSIPHON, PathKind.XRAY)
+    private val raceBudgetMs = 8_000L
 
-    private fun orderedIndices(): List<Int> {
-        return serverList.paths.indices.sortedBy { i ->
-            val kind = serverList.paths.getOrNull(i)?.kind()
-            defaultOrder.indexOf(kind).let { if (it < 0) Int.MAX_VALUE else it }
-        }
+    private fun raceCandidates(): List<Pair<Int, PathConfig>> {
+        return serverList.paths.mapIndexedNotNull { i, path ->
+            val kind = path.kind()
+            if (kind !in defaultOrder) return@mapIndexedNotNull null
+            if (pathRunners[kind] == null) return@mapIndexedNotNull null
+            i to path
+        }.sortedBy { (_, path) ->
+            defaultOrder.indexOf(path.kind()).let { if (it < 0) Int.MAX_VALUE else it }
+        }.take(3)
     }
 
-    suspend fun run(): Result<PathKind> {
-        val indices = orderedIndices()
-        if (indices.isEmpty()) {
+    suspend fun run(): Result<PathKind> = coroutineScope {
+        val toRace = raceCandidates()
+        if (toRace.isEmpty()) {
             _events.value = FallbackEvent.AllPathsFailed
-            return Result.failure(Exception("no paths configured"))
+            return@coroutineScope Result.failure(Exception("no paths configured"))
         }
 
-        var failureCount = 0
-        for (idx in indices) {
-            val path = serverList.paths.getOrNull(idx) ?: continue
-            val kind = path.kind()
-            val runner = pathRunners[kind] ?: continue
+        data class Attempt(val idx: Int, val kind: PathKind, val runner: PathRunner, val result: PathResult)
 
-            _state.value = _state.value.copy(
-                activePathIndex = idx,
-                activePathKind = kind,
-                connectionEstablished = false,
-            )
-            _events.value = FallbackEvent.Connecting(pathKind = kind, index = idx)
+        val jobs = toRace.map { (idx, path) ->
+            async(Dispatchers.IO) {
+                val kind = path.kind()
+                val runner = pathRunners.getValue(kind)
+                _events.value = FallbackEvent.Connecting(pathKind = kind, index = idx)
+                val result = try {
+                    withTimeoutOrNull(raceBudgetMs) {
+                        runner.connect(path)
+                    } ?: PathResult.Failure("timeout ${raceBudgetMs}ms")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    PathResult.Failure(e.message ?: "error")
+                }
+                Attempt(idx, kind, runner, result)
+            }
+        }.toMutableList()
 
-            val result = runner.connect(path)
-            when (result) {
+        val failures = mutableListOf<String>()
+        while (jobs.isNotEmpty()) {
+            val attempt = select<Attempt> {
+                jobs.forEach { job ->
+                    job.onAwait { it }
+                }
+            }
+            jobs.removeAll { it.isCompleted }
+
+            when (val result = attempt.result) {
                 is PathResult.Success -> {
-                    _state.value = _state.value.copy(connectionEstablished = true, failureCount = 0)
-                    _events.value = FallbackEvent.Connected(pathKind = kind, index = idx)
-                    return Result.success(kind)
+                    for ((i, path) in toRace) {
+                        if (i != attempt.idx) {
+                            val other = pathRunners[path.kind()]
+                            if (other != null && other !== attempt.runner) {
+                                other.disconnect()
+                            }
+                        }
+                    }
+                    jobs.forEach { it.cancel() }
+                    _state.value = FallbackState(
+                        activePathIndex = attempt.idx,
+                        activePathKind = attempt.kind,
+                        connectionEstablished = true,
+                        failureCount = 0,
+                    )
+                    _events.value = FallbackEvent.Connected(pathKind = attempt.kind, index = attempt.idx)
+                    return@coroutineScope Result.success(attempt.kind)
                 }
                 is PathResult.Failure -> {
-                    _events.value = FallbackEvent.PathFailed(pathKind = kind, index = idx, error = result.error)
-                    failureCount++
+                    failures.add("${attempt.kind}: ${result.error}")
+                    _events.value = FallbackEvent.PathFailed(attempt.kind, attempt.idx, result.error)
+                    if (result.error.startsWith("timeout")) {
+                        attempt.runner.disconnect()
+                    }
                 }
             }
         }
 
-        _state.value = _state.value.copy(
-            activePathIndex = null,
-            activePathKind = null,
-            connectionEstablished = false,
-            failureCount = failureCount,
-        )
+        _state.value = FallbackState(failureCount = failures.size)
         _events.value = FallbackEvent.AllPathsFailed
-        return Result.failure(Exception("all paths failed"))
+        Result.failure(Exception("all paths failed: ${failures.joinToString("; ")}"))
     }
 
     suspend fun disconnect(runner: PathRunner?) {
