@@ -18,11 +18,11 @@ object ConfigFetcher {
 
     private val defaultSources = listOf(
         ConfigSource(
-            url = "https://raw.githubusercontent.com/opensignalfoundation/iran-vpn/main/dist-config/server-list.json",
+            url = "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json",
             label = "Primary"
         ),
         ConfigSource(
-            url = "https://cdn.jsdelivr.net/gh/opensignalfoundation/iran-vpn@main/dist-config/server-list.json",
+            url = "https://cdn.jsdelivr.net/gh/bgoldmann/iranvpn@main/dist-config/server-list.json",
             label = "Mirror"
         ),
     )

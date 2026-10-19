@@ -125,7 +125,13 @@ impl eframe::App for IranVpnApp {
             } else if self.is_connected {
                 self.active_path
                     .as_deref()
-                    .map(|p| format!("Connected via {p}"))
+                    .map(|p| {
+                        if p.contains("system TUN not") {
+                            format!("Local SOCKS ready — {p}")
+                        } else {
+                            format!("Connected via {p}")
+                        }
+                    })
                     .unwrap_or_else(|| "Connected".to_string())
             } else {
                 "Disconnected / قطع".to_string()
@@ -162,6 +168,16 @@ impl eframe::App for IranVpnApp {
     }
 }
 
+fn which_bin(name: &str) -> bool {
+    // Binary exists if the OS can spawn it (exit code may still be non-zero).
+    Command::new(name)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+}
+
 fn run_connect(share_link: String) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let cache = config_path();
     let _ = std::fs::create_dir_all(&cache);
@@ -182,7 +198,14 @@ fn run_connect(share_link: String) -> Result<String, Box<dyn std::error::Error +
     // Shared runner cannot safely race in parallel (one PROXY_CHILD / SOCKS_PORT).
     // Try paths serially: Psiphon then Xray.
     let runner = WindowsPathRunner::new();
-    let order = [PathKind::Psiphon, PathKind::Xray];
+    let xray_on_path = ["xray", "xray.exe", "xray-core"]
+        .iter()
+        .any(|bin| which_bin(bin));
+    let order: Vec<PathKind> = if xray_on_path {
+        vec![PathKind::Psiphon, PathKind::Xray]
+    } else {
+        vec![PathKind::Psiphon]
+    };
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(async {
@@ -203,20 +226,20 @@ fn run_connect(share_link: String) -> Result<String, Box<dyn std::error::Error +
                     }
                     match probe_default(port).await {
                         Ok(()) => {
+                            // Do NOT bring up Wintun until tun2socks/hev-socks5 is bundled.
+                            // A TUN that only drops packets blackholes the OS — worse than no VPN.
                             #[cfg(target_os = "windows")]
                             {
-                                if let Err(e) = start_wintun_tunnel(port) {
-                                    last_err = format!("wintun: {e}");
-                                    runner.disconnect().await.ok();
-                                    continue;
-                                }
+                                let _ = port; // local SOCKS is up for probe/config refresh
                             }
                             let _ = save_last_good(&cache, &server_list);
                             let sources = default_config_sources();
                             if let Ok(fresh) = fetch_server_list_via_socks(&sources, port).await {
                                 let _ = save_last_good(&cache, &fresh);
                             }
-                            return Ok(format!("{kind:?}"));
+                            return Ok(format!(
+                                "{kind:?} (local SOCKS :{port}; system TUN not bundled yet)"
+                            ));
                         }
                         Err(e) => {
                             last_err = format!("{kind:?} probe: {e}");

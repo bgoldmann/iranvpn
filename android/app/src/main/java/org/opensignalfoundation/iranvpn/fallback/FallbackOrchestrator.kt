@@ -27,7 +27,8 @@ class FallbackOrchestrator(
     val events: Flow<FallbackEvent?> = _events.asStateFlow()
 
     private val defaultOrder = listOf(PathKind.PSIPHON, PathKind.XRAY)
-    private val raceBudgetMs = 8_000L
+    // Psiphon EstablishTunnelTimeoutSeconds is 60s; keep headroom for censored networks.
+    private val raceBudgetMs = 90_000L
 
     private fun raceCandidates(): List<Pair<Int, PathConfig>> {
         return serverList.paths.mapIndexedNotNull { i, path ->

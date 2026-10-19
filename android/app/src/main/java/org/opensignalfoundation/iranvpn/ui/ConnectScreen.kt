@@ -35,9 +35,10 @@ fun ConnectScreen(
     isConnected: Boolean,
     activePath: String? = null,
     isConnecting: Boolean = false,
+    xrayImportEnabled: Boolean = true,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onImportShareLink: ((String) -> Unit)? = null,
+    onImportShareLink: ((String) -> Boolean)? = null,
 ) {
     var showAdvanced by remember { mutableStateOf(false) }
     var shareLink by remember { mutableStateOf("") }
@@ -85,34 +86,46 @@ fun ConnectScreen(
 
         if (showAdvanced && onImportShareLink != null) {
             Spacer(Modifier.height(8.dp))
-            Text(
-                "VLESS / VMess / Trojan / subscription URL",
-                style = MaterialTheme.typography.bodySmall
-            )
-            OutlinedTextField(
-                value = shareLink,
-                onValueChange = { shareLink = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Share link") },
-                singleLine = false,
-                minLines = 2,
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    val trimmed = shareLink.trim()
-                    if (trimmed.isNotEmpty()) {
-                        onImportShareLink(trimmed)
-                        importMessage = "Imported — will be tried with Connect"
-                        shareLink = ""
-                    }
-                },
-                enabled = shareLink.isNotBlank() && !isConnected
-            ) {
-                Text("Import")
-            }
-            importMessage?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
+            if (!xrayImportEnabled) {
+                Text(
+                    "Xray not bundled — add assets/xray/<abi>/xray or a LibXray AAR to enable share links.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else {
+                Text(
+                    "VLESS / VMess / Trojan / subscription URL",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    value = shareLink,
+                    onValueChange = { shareLink = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Share link") },
+                    singleLine = false,
+                    minLines = 2,
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        val trimmed = shareLink.trim()
+                        if (trimmed.isNotEmpty()) {
+                            val ok = onImportShareLink(trimmed)
+                            importMessage = if (ok) {
+                                "Imported — will be tried with Connect"
+                            } else {
+                                "Import failed — check link format"
+                            }
+                            if (ok) shareLink = ""
+                        }
+                    },
+                    enabled = shareLink.isNotBlank() && !isConnected
+                ) {
+                    Text("Import")
+                }
+                importMessage?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }

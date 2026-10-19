@@ -20,7 +20,8 @@ final class VpnController {
     }
 
     private let tunnelBundleId = "com.goldmannllc.IranVPN.tunnel"
-    private var statusObserver: NSObjectProtocol?
+    /// Stored for removal in `deinit` (nonisolated).
+    private nonisolated(unsafe) var statusObserver: NSObjectProtocol?
 
     init() {
         statusObserver = NotificationCenter.default.addObserver(
@@ -43,22 +44,12 @@ final class VpnController {
     func refreshStatus() async {
         do {
             let managers = try await NETunnelProviderManager.loadAllFromPreferences()
-            guard let manager = managers.first else {
+            guard let manager = managers.first(where: { matchesTunnel($0) }) else {
                 isConnected = false
                 isConnecting = false
                 return
             }
-            switch manager.connection.status {
-            case .connected:
-                isConnected = true
-                isConnecting = false
-            case .connecting, .reasserting:
-                isConnecting = true
-                isConnected = false
-            default:
-                isConnected = false
-                isConnecting = false
-            }
+            apply(status: manager.connection.status)
         } catch {
             isConnected = false
             isConnecting = false
@@ -78,6 +69,8 @@ final class VpnController {
                 var cfg = proto.providerConfiguration ?? [:]
                 if let link = importedShareLink, !link.isEmpty {
                     cfg["share_link"] = link
+                } else {
+                    cfg.removeValue(forKey: "share_link")
                 }
                 proto.providerConfiguration = cfg
                 proto.providerBundleIdentifier = tunnelBundleId
@@ -90,7 +83,7 @@ final class VpnController {
             try await manager.loadFromPreferences()
 
             try manager.connection.startVPNTunnel()
-            let intendedPath = importedShareLink?.isEmpty == false ? "Xray" : "Psiphon"
+            let intendedPath = "Psiphon"
 
             var sawActivity = false
             for i in 0..<60 {
@@ -115,7 +108,7 @@ final class VpnController {
             isConnecting = false
             activePath = nil
             if !isConnected {
-                errorMessage = "Tunnel did not connect — enable Network Extension and embed com.goldmannllc.IranVPN.tunnel."
+                errorMessage = "Tunnel did not connect — enable Network Extension entitlement and embed com.goldmannllc.IranVPN.tunnel."
             }
         } catch {
             isConnecting = false
@@ -128,16 +121,40 @@ final class VpnController {
     func disconnect() async {
         do {
             let managers = try await NETunnelProviderManager.loadAllFromPreferences()
-            managers.first?.connection.stopVPNTunnel()
+            managers.first(where: { matchesTunnel($0) })?.connection.stopVPNTunnel()
         } catch {}
         isConnected = false
         isConnecting = false
         activePath = nil
     }
 
+    func clearShareLink() {
+        importedShareLink = nil
+    }
+
+    private func apply(status: NEVPNStatus) {
+        switch status {
+        case .connected:
+            isConnected = true
+            isConnecting = false
+        case .connecting, .reasserting:
+            isConnecting = true
+            isConnected = false
+        default:
+            isConnected = false
+            isConnecting = false
+        }
+    }
+
+    private func matchesTunnel(_ manager: NETunnelProviderManager) -> Bool {
+        guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
+              let id = proto.providerBundleIdentifier else { return false }
+        return id == tunnelBundleId
+    }
+
     private func loadOrCreateManager() async throws -> NETunnelProviderManager {
         let existing = try await NETunnelProviderManager.loadAllFromPreferences()
-        if let manager = existing.first {
+        if let manager = existing.first(where: { matchesTunnel($0) }) {
             manager.isEnabled = true
             return manager
         }

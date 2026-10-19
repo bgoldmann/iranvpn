@@ -8,10 +8,12 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate {
     private var socksPortContinuation: CheckedContinuation<Int, Error>?
     private let lock = NSLock()
     private var finished = false
+    private var listeningPort: Int = 0
     private(set) var socksPort: Int = 0
 
     func start() async throws -> Int {
         socksPort = 0
+        listeningPort = 0
         finished = false
         let tunnel = PsiphonTunnel.newPsiphonTunnel(self)
         self.tunnel = tunnel
@@ -31,9 +33,11 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate {
     }
 
     func stop() {
+        resumeSocks(throwing: CancellationError())
         tunnel?.stop()
         tunnel = nil
         socksPort = 0
+        listeningPort = 0
     }
 
     private func resumeSocks(returning port: Int) {
@@ -61,7 +65,7 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate {
 
     func getPsiphonConfig() -> Any? {
         // Sample Propagation/Sponsor IDs from psiphon-tunnel-core public client.config.
-        // Replace with your own credentials from Psiphon Inc for production.
+        // Replace with production credentials from Psiphon Inc before store release.
         [
             "PropagationChannelId": "24BCA4EE20BEB92C",
             "SponsorId": "721AE60D76700F5A",
@@ -76,19 +80,23 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate {
     func getEmbeddedServerEntries() -> String? { "" }
 
     func onListeningSocksProxyPort(_ port: Int) {
+        // Record bind port but wait for onConnected before treating the path as ready.
         if port > 0 {
-            resumeSocks(returning: port)
+            listeningPort = port
         }
     }
 
     func onConnected() {
         let port = Int(tunnel?.getLocalSocksProxyPort() ?? 0)
-        if port > 0 {
-            resumeSocks(returning: port)
+        let resolved = port > 0 ? port : listeningPort
+        if resolved > 0 {
+            resumeSocks(returning: resolved)
         }
     }
 
-    func onExiting() {}
+    func onExiting() {
+        resumeSocks(throwing: TunnelError.pathUnavailable)
+    }
 
     func onDiagnosticMessage(_ message: String, withTimestamp timestamp: String) {
         _ = (message, timestamp)

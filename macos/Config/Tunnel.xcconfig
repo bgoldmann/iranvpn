@@ -1,4 +1,21 @@
-// Network Extension Packet Tunnel — embed as PlugIn with this bundle ID.
+// Network Extension Packet Tunnel (Psiphon) — embed as PlugIn with this bundle ID.
+// Requires: scripts/fetch-ios-tunnel-deps.sh → ios/Vendor/PsiphonTunnel.xcframework (macos slice).
 PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel
 PRODUCT_NAME = IranVPNTunnel
+PRODUCT_DISPLAY_NAME = Iran VPN Tunnel
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
 SKIP_INSTALL = YES
+GENERATE_INFOPLIST_FILE = NO
+INFOPLIST_FILE = IranVPNTunnel/Info.plist
+CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel.entitlements
+CODE_SIGN_STYLE = Automatic
+MACOSX_DEPLOYMENT_TARGET = 15.4
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
+ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO
+SWIFT_VERSION = 5.0
+SWIFT_EMIT_LOC_STRINGS = YES
+APPLICATION_EXTENSION_API_ONLY = YES
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) PATH_PSIPHON
+FRAMEWORK_SEARCH_PATHS = $(inherited) $(PROJECT_DIR)/../ios/Vendor/PsiphonTunnel.xcframework/macos-arm64_x86_64
+OTHER_LDFLAGS = $(inherited) -framework PsiphonTunnel

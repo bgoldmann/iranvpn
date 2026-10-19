@@ -46,12 +46,26 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
-                ?: signingConfigs.getByName("debug")
+            val releaseSigning = signingConfigs.findByName("release")?.takeIf { it.storeFile != null }
+            // Never silently fall back to the debug keystore for Play uploads.
+            signingConfig = releaseSigning
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    // Fail release packaging early if no upload keystore (debug builds still work).
+    afterEvaluate {
+        listOf("assembleRelease", "bundleRelease").forEach { taskName ->
+            tasks.findByName(taskName)?.doFirst {
+                val cfg = android.signingConfigs.findByName("release")
+                require(cfg?.storeFile != null) {
+                    "Release signing missing. Set IRANVPN_KEYSTORE, IRANVPN_KEYSTORE_PASSWORD, " +
+                        "IRANVPN_KEY_ALIAS, IRANVPN_KEY_PASSWORD (env or gradle.properties)."
+                }
+            }
         }
     }
     packaging {

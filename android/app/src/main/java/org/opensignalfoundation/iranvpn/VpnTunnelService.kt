@@ -44,10 +44,7 @@ class VpnTunnelService : VpnService() {
             ACTION_DISCONNECT -> disconnect(stop = true)
             ACTION_RECONNECT -> {
                 if (!reconnecting) {
-                    reconnecting = true
-                    disconnect(stop = false)
-                    connect()
-                    reconnecting = false
+                    softReconnect()
                 }
             }
         }
@@ -64,73 +61,110 @@ class VpnTunnelService : VpnService() {
         running = true
 
         thread(name = "vpn-connect") {
-            var connectedRunners: Map<PathKind, PathRunner>? = null
-            val result = runBlocking {
-                withContext(Dispatchers.IO) {
-                    val serverList = ConfigFetcher.loadLastGood(this@VpnTunnelService)
-                        ?: ConfigFetcher.fetch(context = this@VpnTunnelService).getOrElse {
-                            return@withContext Result.failure(it)
-                        }
-                    val pathRunners: Map<PathKind, PathRunner> = mapOf(
-                        PathKind.PSIPHON to PsiphonPathRunner(this@VpnTunnelService),
-                        PathKind.XRAY to XrayPathRunner(this@VpnTunnelService),
-                    )
-                    connectedRunners = pathRunners
-                    FallbackOrchestrator(serverList, pathRunners).run()
-                }
-            }
-
-            result.fold(
-                onSuccess = { pathKind ->
-                    val runner = connectedRunners?.get(pathKind)
-                    activeRunner = runner
-                    val socks = runner as? SocksProxyProvider
-                    val socksPort = ConnectivityProbe.awaitSocks(
-                        { socks?.getLocalSocksPort() ?: 0 },
-                        timeoutMs = 20_000,
-                    )
-                    if (socksPort <= 0) {
-                        LocalFailureLog.record(this@VpnTunnelService, pathKind.name, "socks_not_ready")
-                        failAndStop("SOCKS not ready")
-                        return@fold
-                    }
-                    val probeStart = System.currentTimeMillis()
-                    val probe = ConnectivityProbe.probeThroughSocks(socksPort)
-                    val probeRtt = System.currentTimeMillis() - probeStart
-                    if (probe.isFailure) {
-                        LocalFailureLog.record(
-                            this@VpnTunnelService,
-                            pathKind.name,
-                            "probe_failed",
-                            probeRtt,
-                        )
-                        runner?.disconnect()
-                        failAndStop("Probe failed: ${probe.exceptionOrNull()?.message}")
-                        return@fold
-                    }
-                    runOnMain {
-                        activePathName = pathKind.name.lowercase().replaceFirstChar { it.uppercase() }
-                        if (!establishTun(socksPort, socks?.supportsUdp() == true)) {
-                            failAndStop("TUN establish failed")
-                        } else {
-                            isConnected = true
-                            isConnecting = false
-                            ConfigFetcher.saveLastGood(
-                                this@VpnTunnelService,
-                                ConfigFetcher.loadLastGood(this@VpnTunnelService)
-                                    ?: ConfigFetcher.embeddedBootstrap(),
-                            )
-                            updateNotification("Connected via $activePathName")
-                            startHealthLoop(socksPort)
-                        }
-                    }
-                },
-                onFailure = {
-                    LocalFailureLog.record(this@VpnTunnelService, "race", it.message ?: "all_failed")
-                    failAndStop(it.message ?: "all paths failed")
-                }
-            )
+            runConnectAttempt(reuseTun = false)
         }
+    }
+
+    /**
+     * Reconnect without tearing down the TUN interface first — keeps a blackhole
+     * kill switch instead of a cleartext window while the next path races.
+     */
+    private fun softReconnect() {
+        reconnecting = true
+        isConnecting = true
+        isConnected = false
+        healthThread?.interrupt()
+        healthThread = null
+        PacketForwarder.stop()
+        activeRunner?.disconnect()
+        activeRunner = null
+        activePathName = null
+        runOnMain { updateNotification("Reconnecting…") }
+        running = true
+        thread(name = "vpn-reconnect") {
+            try {
+                runConnectAttempt(reuseTun = tunnelFd != null)
+            } finally {
+                reconnecting = false
+            }
+        }
+    }
+
+    private fun runConnectAttempt(reuseTun: Boolean) {
+        var connectedRunners: Map<PathKind, PathRunner>? = null
+        var fetchedList: org.opensignalfoundation.iranvpn.model.ServerList? = null
+        val result = runBlocking {
+            withContext(Dispatchers.IO) {
+                val serverList = ConfigFetcher.fetch(context = this@VpnTunnelService).getOrElse {
+                    ConfigFetcher.loadLastGood(this@VpnTunnelService)
+                        ?: return@withContext Result.failure(it)
+                }
+                fetchedList = serverList
+                val pathRunners = buildMap<PathKind, PathRunner> {
+                    put(PathKind.PSIPHON, PsiphonPathRunner(this@VpnTunnelService))
+                    if (XrayPathRunner.isAvailable(this@VpnTunnelService)) {
+                        put(PathKind.XRAY, XrayPathRunner(this@VpnTunnelService))
+                    }
+                }
+                connectedRunners = pathRunners
+                FallbackOrchestrator(serverList, pathRunners).run()
+            }
+        }
+
+        result.fold(
+            onSuccess = { pathKind ->
+                val runner = connectedRunners?.get(pathKind)
+                activeRunner = runner
+                val socks = runner as? SocksProxyProvider
+                val socksPort = ConnectivityProbe.awaitSocks(
+                    { socks?.getLocalSocksPort() ?: 0 },
+                    timeoutMs = 20_000,
+                )
+                if (socksPort <= 0) {
+                    LocalFailureLog.record(this@VpnTunnelService, pathKind.name, "socks_not_ready")
+                    failAndStop("SOCKS not ready")
+                    return@fold
+                }
+                val probeStart = System.currentTimeMillis()
+                val probe = ConnectivityProbe.probeThroughSocks(socksPort)
+                val probeRtt = System.currentTimeMillis() - probeStart
+                if (probe.isFailure) {
+                    LocalFailureLog.record(
+                        this@VpnTunnelService,
+                        pathKind.name,
+                        "probe_failed",
+                        probeRtt,
+                    )
+                    runner?.disconnect()
+                    failAndStop("Probe failed: ${probe.exceptionOrNull()?.message}")
+                    return@fold
+                }
+                val listToSave = fetchedList
+                val pathLabel = pathKind.name.lowercase().replaceFirstChar { it.uppercase() }
+                if (!establishTun(socksPort, socks?.supportsUdp() == true, reuseTun = reuseTun)) {
+                    failAndStop("TUN establish failed")
+                    return@fold
+                }
+                if (!PacketForwarder.isForwarding) {
+                    failAndStop("Packet forwarder not running")
+                    return@fold
+                }
+                runOnMain {
+                    activePathName = pathLabel
+                    isConnected = true
+                    isConnecting = false
+                    if (listToSave != null) {
+                        ConfigFetcher.saveLastGood(this@VpnTunnelService, listToSave)
+                    }
+                    updateNotification("Connected via $activePathName")
+                    startHealthLoop(socksPort)
+                }
+            },
+            onFailure = {
+                LocalFailureLog.record(this@VpnTunnelService, "race", it.message ?: "all_failed")
+                failAndStop(it.message ?: "all paths failed")
+            }
+        )
     }
 
     private fun startAsForeground(status: String) {
@@ -170,41 +204,67 @@ class VpnTunnelService : VpnService() {
         android.os.Handler(android.os.Looper.getMainLooper()).post(block)
     }
 
-    private fun establishTun(socksPort: Int, forwardUdp: Boolean): Boolean {
-        val builder = Builder()
-            .setSession("IranVPN")
-            .setMtu(PacketForwarder.DEFAULT_MTU)
-            .addAddress("10.0.0.2", 24)
-            .addRoute("0.0.0.0", 0)
-            .addDnsServer("198.18.0.2")
-            .setBlocking(false)
+    private fun establishTun(socksPort: Int, forwardUdp: Boolean, reuseTun: Boolean = false): Boolean {
+        if (!reuseTun || tunnelFd == null) {
+            tunnelFd?.close()
+            tunnelFd = null
+            val builder = Builder()
+                .setSession("IranVPN")
+                .setMtu(PacketForwarder.DEFAULT_MTU)
+                .addAddress("10.0.0.2", 24)
+                .addRoute("0.0.0.0", 0)
+                // Prefer UDP-capable DNS only when forwardUdp; otherwise keep fake-IP
+                // style DNS to avoid cleartext UDP DNS leaks outside the tunnel.
+                .addDnsServer(if (forwardUdp) "1.1.1.1" else "198.18.0.2")
+                .setBlocking(false)
 
-        try {
-            builder.addAddress("fd00:0:0:1::2", 64)
-            builder.addRoute("::", 0)
-        } catch (_: Exception) {}
+            // Only claim full IPv6 when tun2socks can forward UDP/IPv6 meaningfully.
+            // Without a default IPv6 route, leave IPv6 on the underlay (avoids blackhole).
+            if (forwardUdp) {
+                try {
+                    builder.addAddress("fd00:0:0:1::2", 64)
+                    builder.addRoute("::", 0)
+                    builder.addDnsServer("2606:4700:4700::1111")
+                } catch (_: Exception) {}
+            }
 
-        try {
-            builder.addDisallowedApplication(packageName)
-        } catch (e: Exception) {
-            android.util.Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "addDisallowedApplication failed: ${e.message}")
+            }
+
+            tunnelFd = builder.establish()
+            if (tunnelFd == null) {
+                activeRunner?.disconnect()
+                return false
+            }
         }
 
-        tunnelFd = builder.establish()
-        if (tunnelFd == null) {
-            activeRunner?.disconnect()
-            return false
-        }
-
+        // Allow forwarder to stay alive while isConnected flips true after return.
         val ok = PacketForwarder.start(
             tunnelFd!!,
             socksPort,
             mtu = PacketForwarder.DEFAULT_MTU,
             forwardUdp = forwardUdp,
-        ) { running && isConnected }
+        ) { running }
         if (!ok) {
-            tunnelFd?.close()
-            tunnelFd = null
+            if (!reuseTun) {
+                tunnelFd?.close()
+                tunnelFd = null
+            }
+            activeRunner?.disconnect()
+            return false
+        }
+        // Brief settle so native tun2socks can fail fast before we claim Connected.
+        try {
+            Thread.sleep(300)
+        } catch (_: InterruptedException) {}
+        if (!PacketForwarder.isForwarding) {
+            if (!reuseTun) {
+                tunnelFd?.close()
+                tunnelFd = null
+            }
             activeRunner?.disconnect()
             return false
         }
@@ -227,16 +287,23 @@ class VpnTunnelService : VpnService() {
                 if (probe.isFailure) {
                     failures++
                     android.util.Log.w(TAG, "health probe failed ($failures): ${probe.exceptionOrNull()?.message}")
-                    if (failures >= 2) {
-                        // Kill switch: stop forwarding, request reconnect without stopSelf race
+                    if (failures >= 2 || !PacketForwarder.isForwarding) {
+                        // Keep TUN up; soft-reconnect races a new path under kill switch.
                         PacketForwarder.stop()
                         isConnected = false
                         runOnMain { updateNotification("Reconnecting…") }
-                        startService(Intent(this@VpnTunnelService, VpnTunnelService::class.java).apply {
+                        val intent = Intent(this@VpnTunnelService, VpnTunnelService::class.java).apply {
                             action = ACTION_RECONNECT
-                        })
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(intent)
+                        } else {
+                            startService(intent)
+                        }
                         break
                     }
+                } else if (!PacketForwarder.isForwarding) {
+                    failures++
                 } else {
                     failures = 0
                 }

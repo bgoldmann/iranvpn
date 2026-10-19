@@ -14,7 +14,9 @@ enum SocksNetworkSettings {
         ipv6.includedRoutes = [NEIPv6Route.default()]
         settings.ipv6Settings = ipv6
 
-        settings.dnsSettings = NEDNSSettings(servers: ["1.1.1.1", "8.8.8.8"])
+        // TUN-local fake DNS (same idea as Android). PAC SOCKS handles TCP; avoid
+        // sending cleartext UDP DNS to public resolvers outside the tunnel.
+        settings.dnsSettings = NEDNSSettings(servers: ["198.18.0.2"])
         settings.dnsSettings?.matchDomains = [""]
 
         // NEProxySettings has no socksServer API — use PAC to select SOCKS5.

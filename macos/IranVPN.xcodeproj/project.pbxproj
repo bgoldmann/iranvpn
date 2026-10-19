@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		8B90D1482DEDD44A00FBD189 /* IranVPNFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 8B90D1472DEDD44A00FBD189 /* IranVPNFeature */; };
+		8BA300022DEDD0D5001A66F9 /* IranVPNTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BA300012DEDD0D5001A66F9 /* IranVPNTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8BA300112DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA300102DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; };
+		8BA300122DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA300102DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,11 +21,46 @@
 			remoteGlobalIDString = 8BC2655B2DEDD3F400F279A4;
 			remoteInfo = IranVPN;
 		};
+		8BA300042DEDD0D5001A66F9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8BC265542DEDD3F400F279A4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8BA300062DEDD0D5001A66F9;
+			remoteInfo = IranVPNTunnel;
+		};
 /* End PBXContainerItemProxy section */
+
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8BA300032DEDD0D5001A66F9 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8BA300022DEDD0D5001A66F9 /* IranVPNTunnel.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BA300132DEDD0D5001A66F9 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				8BA300122DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		8BC2655C2DEDD3F400F279A4 /* IranVPN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IranVPN.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BC265742DEDD3F500F279A4 /* IranVPN.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = IranVPN.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BA300012DEDD0D5001A66F9 /* IranVPNTunnel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = IranVPNTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8BA300102DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = PsiphonTunnel.xcframework; path = ../ios/Vendor/PsiphonTunnel.xcframework; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,8 +71,17 @@
 				Release.xcconfig,
 				Shared.xcconfig,
 				Tests.xcconfig,
+				Tunnel.xcconfig,
 			);
 			target = 8BC2655B2DEDD3F400F279A4 /* IranVPN */;
+		};
+		8BA300082DEDD0D5001A66F9 /* Exceptions for "IranVPNTunnel" folder in "IranVPNTunnel" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				IranVPNTunnel.entitlements,
+				Info.plist,
+			);
+			target = 8BA300062DEDD0D5001A66F9 /* IranVPNTunnel */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -57,6 +104,14 @@
 			path = IranVPNUITests;
 			sourceTree = "<group>";
 		};
+		8BA300072DEDD0D5001A66F9 /* IranVPNTunnel */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8BA300082DEDD0D5001A66F9 /* Exceptions for "IranVPNTunnel" folder in "IranVPNTunnel" target */,
+			);
+			path = IranVPNTunnel;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,12 +130,21 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BA300092DEDD0D5001A66F9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8BA300112DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		8B90D1462DEDD44A00FBD189 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8BA300102DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -90,6 +154,7 @@
 			children = (
 				8B90D1BC2DEE373300FBD189 /* Config */,
 				8BC2655E2DEDD3F400F279A4 /* IranVPN */,
+				8BA300072DEDD0D5001A66F9 /* IranVPNTunnel */,
 				8BC265772DEDD3F500F279A4 /* IranVPNUITests */,
 				8B90D1462DEDD44A00FBD189 /* Frameworks */,
 				8BC2655D2DEDD3F400F279A4 /* Products */,
@@ -100,6 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				8BC2655C2DEDD3F400F279A4 /* IranVPN.app */,
+				8BA300012DEDD0D5001A66F9 /* IranVPNTunnel.appex */,
 				8BC265742DEDD3F500F279A4 /* IranVPN.xctest */,
 			);
 			name = Products;
@@ -115,10 +181,12 @@
 				8BC265582DEDD3F400F279A4 /* Sources */,
 				8BC265592DEDD3F400F279A4 /* Frameworks */,
 				8BC2655A2DEDD3F400F279A4 /* Resources */,
+				8BA300032DEDD0D5001A66F9 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8BA300052DEDD0D5001A66F9 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8B90D1BC2DEE373300FBD189 /* Config */,
@@ -131,6 +199,29 @@
 			productName = IranVPN;
 			productReference = 8BC2655C2DEDD3F400F279A4 /* IranVPN.app */;
 			productType = "com.apple.product-type.application";
+		};
+		8BA300062DEDD0D5001A66F9 /* IranVPNTunnel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8BA3000C2DEDD0D5001A66F9 /* Build configuration list for PBXNativeTarget "IranVPNTunnel" */;
+			buildPhases = (
+				8BA3000A2DEDD0D5001A66F9 /* Sources */,
+				8BA300092DEDD0D5001A66F9 /* Frameworks */,
+				8BA3000B2DEDD0D5001A66F9 /* Resources */,
+				8BA300132DEDD0D5001A66F9 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8BA300072DEDD0D5001A66F9 /* IranVPNTunnel */,
+			);
+			name = IranVPNTunnel;
+			packageProductDependencies = (
+			);
+			productName = IranVPNTunnel;
+			productReference = 8BA300012DEDD0D5001A66F9 /* IranVPNTunnel.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		8BC265732DEDD3F500F279A4 /* IranVPNUITests */ = {
 			isa = PBXNativeTarget;
@@ -173,6 +264,9 @@
 						CreatedOnToolsVersion = 16.3;
 						TestTargetID = 8BC2655B2DEDD3F400F279A4;
 					};
+					8BA300062DEDD0D5001A66F9 = {
+						CreatedOnToolsVersion = 16.3;
+					};
 				};
 			};
 			buildConfigurationList = 8BC265572DEDD3F400F279A4 /* Build configuration list for PBXProject "IranVPN" */;
@@ -190,6 +284,7 @@
 			projectRoot = "";
 			targets = (
 				8BC2655B2DEDD3F400F279A4 /* IranVPN */,
+				8BA300062DEDD0D5001A66F9 /* IranVPNTunnel */,
 				8BC265732DEDD3F500F279A4 /* IranVPNUITests */,
 			);
 		};
@@ -204,6 +299,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		8BC265722DEDD3F500F279A4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BA3000B2DEDD0D5001A66F9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -227,6 +329,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8BA3000A2DEDD0D5001A66F9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -234,6 +343,11 @@
 			isa = PBXTargetDependency;
 			target = 8BC2655B2DEDD3F400F279A4 /* IranVPN */;
 			targetProxy = 8BC265752DEDD3F500F279A4 /* PBXContainerItemProxy */;
+		};
+		8BA300052DEDD0D5001A66F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8BA300062DEDD0D5001A66F9 /* IranVPNTunnel */;
+			targetProxy = 8BA300042DEDD0D5001A66F9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -290,6 +404,38 @@
 			};
 			name = Release;
 		};
+		8BA3000D2DEDD0D5001A66F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B90D1BC2DEE373300FBD189 /* Config */;
+			baseConfigurationReferenceRelativePath = Tunnel.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = IranVPNTunnel/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited) PATH_PSIPHON";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		8BA3000E2DEDD0D5001A66F9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B90D1BC2DEE373300FBD189 /* Config */;
+			baseConfigurationReferenceRelativePath = Tunnel.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = IranVPNTunnel/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN.tunnel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) PATH_PSIPHON";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -316,6 +462,15 @@
 			buildConfigurations = (
 				8BC265852DEDD3F500F279A4 /* Debug */,
 				8BC265862DEDD3F500F279A4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8BA3000C2DEDD0D5001A66F9 /* Build configuration list for PBXNativeTarget "IranVPNTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BA3000D2DEDD0D5001A66F9 /* Debug */,
+				8BA3000E2DEDD0D5001A66F9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

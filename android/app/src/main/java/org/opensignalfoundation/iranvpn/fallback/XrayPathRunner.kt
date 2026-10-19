@@ -241,5 +241,23 @@ class XrayPathRunner(private val context: Context) : PathRunner, SocksProxyProvi
 
     companion object {
         private const val DEFAULT_SOCKS_PORT = 10808
+
+        /** True when LibXray is on the classpath or an xray binary is in assets. */
+        fun isAvailable(context: Context): Boolean {
+            try {
+                Class.forName("libxray.LibXray")
+                return true
+            } catch (_: ClassNotFoundException) {
+            }
+            val abi = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "armeabi-v7a"
+            for (assetPath in listOf("xray/$abi/xray", "xray/xray")) {
+                try {
+                    context.assets.open(assetPath).use { }
+                    return true
+                } catch (_: Exception) {
+                }
+            }
+            return false
+        }
     }
 }

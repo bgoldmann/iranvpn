@@ -115,12 +115,12 @@ pub fn resolve_bootstrap(cache_dir: Option<&Path>) -> ServerList {
 pub fn default_config_sources() -> Vec<ConfigSource> {
     vec![
         ConfigSource {
-            url: "https://raw.githubusercontent.com/opensignalfoundation/iran-vpn/main/dist-config/server-list.json"
+            url: "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json"
                 .to_string(),
             label: Some("Primary (GitHub)".to_string()),
         },
         ConfigSource {
-            url: "https://cdn.jsdelivr.net/gh/opensignalfoundation/iran-vpn@main/dist-config/server-list.json"
+            url: "https://cdn.jsdelivr.net/gh/bgoldmann/iranvpn@main/dist-config/server-list.json"
                 .to_string(),
             label: Some("Mirror (jsDelivr)".to_string()),
         },

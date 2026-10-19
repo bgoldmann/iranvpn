@@ -1,4 +1,3 @@
-import NetworkExtension
 import SwiftUI
 
 /// US-001: Zero-config Connect/Disconnect. Never fakes Connected.
@@ -46,7 +45,6 @@ struct LegalDisclaimerView: View {
 
 struct ConnectView: View {
     @Bindable var vpn: VpnController
-    @State private var shareLink = ""
     @State private var showAdvanced = false
 
     var body: some View {
@@ -71,12 +69,10 @@ struct ConnectView: View {
                 showAdvanced.toggle()
             }
             if showAdvanced {
-                TextField("vless:// share link", text: $shareLink, axis: .vertical)
-                    .lineLimit(2...4)
-                Button("Import") {
-                    vpn.importedShareLink = shareLink.trimmingCharacters(in: .whitespacesAndNewlines)
-                    shareLink = ""
-                }
+                Text("Share-link / Xray path is not available on macOS yet — Connect uses Psiphon only.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
         }
         .padding()

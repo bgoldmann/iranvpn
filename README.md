@@ -46,10 +46,10 @@ Iran’s filtering stack combines DNS poisoning, deep packet inspection, protoco
 | | |
 |---|---|
 | **One-tap connect** | Zero-config default path — no server import required for first use |
-| **Path race + fallback** | Psiphon (incl. Conduit) and Xray competed in parallel with a probe gate |
-| **Kill switch** | Never reports Connected until SOCKS/tunnel probe succeeds |
-| **Share-link import** | Optional advanced VLESS / VMess / Trojan / REALITY configs |
-| **Multi-platform** | Android, iOS, Windows, macOS from one research codebase |
+| **Path race + fallback** | Psiphon and (when bundled) Xray raced with a probe gate |
+| **Kill switch** | Never reports Connected until SOCKS / system tunnel is ready |
+| **Share-link import** | Optional VLESS / VMess / Trojan when Xray/LibXray is present |
+| **Multi-platform** | Android + iOS system VPN; Windows local SOCKS; macOS NE (Psiphon) |
 | **Decentralized config** | Redundant bootstrap sources + last-good cache |
 
 ---
@@ -78,8 +78,8 @@ flowchart LR
 | [`core/`](core/) | Rust shared library — race engine, config types, DoH, FFI/JNI |
 | [`android/`](android/) | Kotlin + Jetpack Compose · VpnService · tun2socks · Psiphon/Xray |
 | [`ios/`](ios/) | SwiftUI · dual Packet Tunnel extensions (Psiphon + LibXray) |
-| [`macos/`](macos/) | SwiftUI · Network Extension |
-| [`windows/`](windows/) | Rust + egui · Wintun |
+| [`macos/`](macos/) | SwiftUI · Packet Tunnel appex (Psiphon + PAC SOCKS) |
+| [`windows/`](windows/) | Rust + egui · local SOCKS (system Wintun deferred) |
 | [`station/`](station/) | Volunteer P2P / Conduit-style relay helpers |
 | [`dist-config/`](dist-config/) | Bootstrap server-list distribution |
 | [`report-iran-vpn-2026/`](report-iran-vpn-2026/) | Research report |
@@ -137,8 +137,17 @@ Details: [`ios/README.md`](ios/README.md) · Store listing copy: [`docs/store-pu
 
 ### Windows / macOS
 
-- Windows: [`windows/README.md`](windows/README.md)
-- macOS: [`macos/README.md`](macos/README.md)
+- Windows: [`windows/README.md`](windows/README.md) — local SOCKS after probe; system TUN not bundled yet
+- macOS: [`macos/README.md`](macos/README.md) — `IranVPNTunnel` appex + Psiphon from `ios/Vendor`
+
+### Platform maturity
+
+| Platform | System VPN | Default path | Xray / share links |
+|----------|------------|--------------|--------------------|
+| Android | VpnService + tun2socks | Psiphon | When `assets/xray` or LibXray AAR present |
+| iOS | Dual NE appexes | Psiphon | When `IranVPNTunnelXray` + LibXray embedded |
+| macOS | NE appex + PAC SOCKS | Psiphon | Not wired yet (Psiphon only) |
+| Windows | Deferred (no blackhole TUN) | Psiphon on PATH | When `xray` on PATH + full JSON |
 
 ---
 
@@ -189,7 +198,7 @@ See [`docs/legal-disclaimer.md`](docs/legal-disclaimer.md) and [Open Signal Foun
 
 ## License
 
-See the repository license file when published. Third-party components (Psiphon, Xray/LibXray, Conduit, tun2socks, and others) remain under their respective licenses.
+[MIT](LICENSE). Third-party components (Psiphon, Xray/LibXray, Conduit, tun2socks, Wintun, and others) remain under their respective licenses.
 
 ---
 

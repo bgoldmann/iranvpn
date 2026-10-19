@@ -13,6 +13,8 @@ CODE_SIGN_STYLE = Automatic
 IPHONEOS_DEPLOYMENT_TARGET = 18.4
 TARGETED_DEVICE_FAMILY = 1,2
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks @executable_path/../../Frameworks
+// Ensure the dynamic PsiphonTunnel.framework is copied into the appex (see Embed Frameworks phase).
+ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO
 SWIFT_VERSION = 5.0
 SWIFT_EMIT_LOC_STRINGS = YES
 APPLICATION_EXTENSION_API_ONLY = YES

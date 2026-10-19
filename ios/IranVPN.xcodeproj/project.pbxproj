@@ -13,6 +13,7 @@
 		8BA200012DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200002DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; };
 		8BA200032DEDD0D5001A66F9 /* LibXray.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200022DEDD0D5001A66F9 /* LibXray.xcframework */; };
 		8BA200052DEDD0D5001A66F9 /* IranVPNTunnelXray.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BA200042DEDD0D5001A66F9 /* IranVPNTunnelXray.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8BA3000F2DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200002DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,17 @@
 				8BA200052DEDD0D5001A66F9 /* IranVPNTunnelXray.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BA200102DEDD0D5001A66F9 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				8BA3000F2DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -215,6 +227,7 @@
 				8BA100042DEDD0D5001A66F9 /* Sources */,
 				8BA100032DEDD0D5001A66F9 /* Frameworks */,
 				8BA100052DEDD0D5001A66F9 /* Resources */,
+				8BA200102DEDD0D5001A66F9 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

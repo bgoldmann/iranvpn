@@ -1,6 +1,9 @@
 package org.opensignalfoundation.iranvpn
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,9 +15,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
+import org.opensignalfoundation.iranvpn.fallback.XrayPathRunner
 import org.opensignalfoundation.iranvpn.model.PathConfig
-import org.opensignalfoundation.iranvpn.model.ShareLinkParser
 import org.opensignalfoundation.iranvpn.model.ServerList
+import org.opensignalfoundation.iranvpn.model.ShareLinkParser
 import org.opensignalfoundation.iranvpn.ui.ConnectScreen
 import org.opensignalfoundation.iranvpn.ui.LegalDisclaimer
 import org.opensignalfoundation.iranvpn.ui.Theme
@@ -42,6 +47,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* FGS still starts; notification may be silent if denied */ }
+
     override fun onResume() {
         super.onResume()
         syncFromService()
@@ -60,7 +69,6 @@ class MainActivity : ComponentActivity() {
         if (connected) {
             connectingState.value = false
         } else if (!VpnTunnelService.isConnecting && connectingState.value) {
-            // Service finished attempting without success
             connectingState.value = false
         }
         if (VpnTunnelService.isConnecting) {
@@ -70,6 +78,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        maybeRequestNotificationPermission()
         syncFromService()
         setContent {
             Theme {
@@ -87,10 +96,12 @@ class MainActivity : ComponentActivity() {
                     val connected by remember { connectionState }
                     val connecting by remember { connectingState }
                     val activePath by remember { activePathState }
+                    val xrayReady = remember { XrayPathRunner.isAvailable(applicationContext) }
                     ConnectScreen(
                         isConnected = connected,
                         isConnecting = connecting,
                         activePath = activePath,
+                        xrayImportEnabled = xrayReady,
                         onConnect = {
                             connectingState.value = true
                             prepareAndConnect()
@@ -102,6 +113,9 @@ class MainActivity : ComponentActivity() {
                             activePathState.value = null
                         },
                         onImportShareLink = { link ->
+                            if (!XrayPathRunner.isAvailable(applicationContext)) {
+                                return@ConnectScreen false
+                            }
                             val parsed = ShareLinkParser.parse(link)
                             if (parsed is PathConfig.XrayConfig) {
                                 val list = ServerList(
@@ -112,11 +126,25 @@ class MainActivity : ComponentActivity() {
                                     sources = emptyList(),
                                 )
                                 ConfigFetcher.saveLastGood(applicationContext, list)
+                                true
+                            } else {
+                                false
                             }
                         }
                     )
                 }
             }
+        }
+    }
+
+    private fun maybeRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -130,8 +158,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startVpnConnection() {
-        startService(Intent(this, VpnTunnelService::class.java).apply {
+        val intent = Intent(this, VpnTunnelService::class.java).apply {
             action = VpnTunnelService.ACTION_CONNECT
-        })
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
     }
 }

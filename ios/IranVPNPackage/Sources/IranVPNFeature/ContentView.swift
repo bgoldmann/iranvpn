@@ -79,17 +79,34 @@ struct ConnectView: View {
             }
             .buttonStyle(.borderless)
             if showAdvanced {
-                TextField("vless:// / vmess:// / trojan://", text: $shareLink, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(2...4)
-                    .padding(.horizontal)
-                Button("Import share link") {
-                    vpn.importedShareLink = shareLink.trimmingCharacters(in: .whitespacesAndNewlines)
-                    shareLink = ""
+                if vpn.xrayExtensionAvailable {
+                    TextField("vless:// / vmess:// / trojan://", text: $shareLink, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(2...4)
+                        .padding(.horizontal)
+                    Button("Import share link") {
+                        vpn.importedShareLink = shareLink.trimmingCharacters(in: .whitespacesAndNewlines)
+                        shareLink = ""
+                    }
+                    .disabled(shareLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    if let active = vpn.importedShareLink, !active.isEmpty {
+                        Text("Xray link active — Connect uses Xray extension")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Button("Clear share link (use Psiphon)") {
+                            vpn.clearShareLink()
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                } else {
+                    Text("Xray extension not in this build — run scripts/fetch-ios-tunnel-deps.sh and embed IranVPNTunnelXray.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-                .disabled(shareLink.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Text("Conduit P2P is not available as an iOS station; Psiphon direct + imported Xray only.")
+            Text("Conduit P2P is not available as an iOS station; default path is Psiphon.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
