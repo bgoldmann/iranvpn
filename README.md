@@ -23,6 +23,7 @@
 <p align="center">
   <a href="#features">Features</a> ·
   <a href="#architecture">Architecture</a> ·
+  <a href="#advertisement-poster">Poster</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#documentation">Docs</a> ·
   <a href="#legal-notice">Legal</a>
@@ -84,6 +85,19 @@ flowchart LR
 | [`report-iran-vpn-2026/`](report-iran-vpn-2026/) | Research report |
 | [`docs/`](docs/) | Legal, protocol notes, [store publish guide](docs/store-publish-guide.md) |
 | [`assets/branding/`](assets/branding/) | App icon & logo |
+| [`assets/advertising/`](assets/advertising/) | Verified advertisement poster, Reel adaptation, and campaign copy |
+
+---
+
+## Advertisement poster
+
+<p align="center">
+  <a href="https://github.com/bgoldmann/iranvpn">
+    <img src="assets/advertising/iranvpn-advertisement-poster.jpg" alt="Iran VPN open-source multi-platform advertisement poster" width="512" />
+  </a>
+</p>
+
+The poster's QR code resolves directly to this repository. Platform-ready media and approved campaign copy are documented in [`assets/advertising/`](assets/advertising/).
 
 ---
 
