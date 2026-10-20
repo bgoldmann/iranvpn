@@ -1,0 +1,2 @@
+// Enabled for Packet Tunnel builds — requires capability on Mac App IDs (paid team).
+IRANVPN_ENTITLEMENTS_SUFFIX = -NetworkExtension

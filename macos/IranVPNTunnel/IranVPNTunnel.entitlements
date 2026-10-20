@@ -8,13 +8,6 @@
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
-	<key>com.apple.developer.networking.networkextension</key>
-	<array>
-		<string>packet-tunnel-provider</string>
-	</array>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.goldmannllc.IranVPN</string>
-	</array>
+	<!-- Packet Tunnel: use IranVPNTunnel-NetworkExtension.entitlements after portal capability is on. -->
 </dict>
 </plist>

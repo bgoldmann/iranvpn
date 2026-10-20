@@ -1148,11 +1148,13 @@ name = "iran-vpn-windows"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "directories",
  "eframe",
  "egui",
  "image",
  "iran-vpn-core",
+ "serde_json",
  "tokio",
  "winres",
  "wintun",

@@ -1,0 +1,10 @@
+{
+  "ClientVersion": "1",
+  "PropagationChannelId": "07D1ACD69B3AC7A2",
+  "SponsorId": "EE0B7486ACAE75AA",
+  "EmitDiagnosticNotices": true,
+  "EstablishTunnelTimeoutSeconds": 120,
+  "LocalSocksProxyPort": 0,
+  "LocalHttpProxyPort": 0,
+  "DisableLocalSocksAuth": true
+}

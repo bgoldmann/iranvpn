@@ -26,7 +26,13 @@ class FallbackOrchestrator(
     private val _events = MutableStateFlow<FallbackEvent?>(null)
     val events: Flow<FallbackEvent?> = _events.asStateFlow()
 
-    private val defaultOrder = listOf(PathKind.PSIPHON, PathKind.XRAY)
+    private val defaultOrder = listOf(
+        PathKind.PSIPHON,
+        PathKind.XRAY,
+        PathKind.SINGBOX,
+        PathKind.TOR,
+        PathKind.OUTLINE,
+    )
     // Psiphon EstablishTunnelTimeoutSeconds is 60s; keep headroom for censored networks.
     private val raceBudgetMs = 90_000L
 
@@ -38,7 +44,8 @@ class FallbackOrchestrator(
             i to path
         }.sortedBy { (_, path) ->
             defaultOrder.indexOf(path.kind()).let { if (it < 0) Int.MAX_VALUE else it }
-        }.take(3)
+        }
+        // Race every eligible configured path (was .take(3), which dropped Tor/Outline).
     }
 
     suspend fun run(): Result<PathKind> = coroutineScope {

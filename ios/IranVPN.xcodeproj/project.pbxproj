@@ -11,7 +11,6 @@
 		8B41F6852DEDD25C001A66F9 /* IranVPNFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 8B41F6842DEDD25C001A66F9 /* IranVPNFeature */; };
 		8BA100082DEDD0D5001A66F9 /* IranVPNTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BA100012DEDD0D5001A66F9 /* IranVPNTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BA200012DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200002DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; };
-		8BA200032DEDD0D5001A66F9 /* LibXray.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200022DEDD0D5001A66F9 /* LibXray.xcframework */; };
 		8BA200052DEDD0D5001A66F9 /* IranVPNTunnelXray.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8BA200042DEDD0D5001A66F9 /* IranVPNTunnelXray.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8BA3000F2DEDD0D5001A66F9 /* PsiphonTunnel.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8BA200002DEDD0D5001A66F9 /* PsiphonTunnel.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -39,7 +38,6 @@
 			remoteInfo = IranVPNTunnelXray;
 		};
 /* End PBXContainerItemProxy section */
-
 
 /* Begin PBXCopyFilesBuildPhase section */
 		8BA100072DEDD0D5001A66F9 /* Embed Foundation Extensions */ = {
@@ -80,18 +78,16 @@
 		8BA1000E2DEDD0D5001A66F9 /* Exceptions for "IranVPNTunnel" folder in "IranVPNTunnel" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Info-Xray.plist",
 				Info.plist,
-				Info-Xray.plist,
-				IranVPNTunnel.entitlements,
 			);
 			target = 8BA100062DEDD0D5001A66F9 /* IranVPNTunnel */;
 		};
 		8BA2000E2DEDD0D5001A66F9 /* Exceptions for "IranVPNTunnel" folder in "IranVPNTunnelXray" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Info-Xray.plist",
 				Info.plist,
-				Info-Xray.plist,
-				IranVPNTunnel.entitlements,
 			);
 			target = 8BA200072DEDD0D5001A66F9 /* IranVPNTunnelXray */;
 		};
@@ -220,6 +216,30 @@
 			productReference = 8B41F6452DEDD0D5001A66F9 /* IranVPN.app */;
 			productType = "com.apple.product-type.application";
 		};
+		8B41F65B2DEDD0D6001A66F9 /* IranVPNUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8B41F66C2DEDD0D6001A66F9 /* Build configuration list for PBXNativeTarget "IranVPNUITests" */;
+			buildPhases = (
+				8B41F6582DEDD0D6001A66F9 /* Sources */,
+				8B41F6592DEDD0D6001A66F9 /* Frameworks */,
+				8B41F65A2DEDD0D6001A66F9 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8B41F65E2DEDD0D6001A66F9 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				8B41F65F2DEDD0D6001A66F9 /* IranVPNUITests */,
+			);
+			name = IranVPNUITests;
+			packageProductDependencies = (
+				8B41F6822DEDD23B001A66F9 /* IranVPNFeature */,
+			);
+			productName = IranVPNUITests;
+			productReference = 8B41F65C2DEDD0D6001A66F9 /* IranVPN.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		8BA100062DEDD0D5001A66F9 /* IranVPNTunnel */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8BA1000D2DEDD0D5001A66F9 /* Build configuration list for PBXNativeTarget "IranVPNTunnel" */;
@@ -265,30 +285,6 @@
 			productReference = 8BA200042DEDD0D5001A66F9 /* IranVPNTunnelXray.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		8B41F65B2DEDD0D6001A66F9 /* IranVPNUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 8B41F66C2DEDD0D6001A66F9 /* Build configuration list for PBXNativeTarget "IranVPNUITests" */;
-			buildPhases = (
-				8B41F6582DEDD0D6001A66F9 /* Sources */,
-				8B41F6592DEDD0D6001A66F9 /* Frameworks */,
-				8B41F65A2DEDD0D6001A66F9 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				8B41F65E2DEDD0D6001A66F9 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				8B41F65F2DEDD0D6001A66F9 /* IranVPNUITests */,
-			);
-			name = IranVPNUITests;
-			packageProductDependencies = (
-				8B41F6822DEDD23B001A66F9 /* IranVPNFeature */,
-			);
-			productName = IranVPNUITests;
-			productReference = 8B41F65C2DEDD0D6001A66F9 /* IranVPN.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -297,20 +293,20 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1630;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					8B41F6442DEDD0D5001A66F9 = {
 						CreatedOnToolsVersion = 16.3;
+					};
+					8B41F65B2DEDD0D6001A66F9 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 8B41F6442DEDD0D5001A66F9;
 					};
 					8BA100062DEDD0D5001A66F9 = {
 						CreatedOnToolsVersion = 16.3;
 					};
 					8BA200072DEDD0D5001A66F9 = {
 						CreatedOnToolsVersion = 16.3;
-					};
-					8B41F65B2DEDD0D6001A66F9 = {
-						CreatedOnToolsVersion = 16.3;
-						TestTargetID = 8B41F6442DEDD0D5001A66F9;
 					};
 				};
 			};
@@ -323,6 +319,9 @@
 			);
 			mainGroup = 8B41F63C2DEDD0D5001A66F9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8B41F6902DEDD23B001A66F9 /* XCLocalSwiftPackageReference "IranVPNPackage" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B41F6462DEDD0D5001A66F9 /* Products */;
 			projectDirPath = "";
@@ -475,6 +474,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -532,6 +532,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
 				VALIDATE_PRODUCT = YES;
@@ -546,6 +547,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_DISPLAY_NAME)";
@@ -569,6 +571,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_DISPLAY_NAME)";
@@ -589,7 +592,9 @@
 			baseConfigurationReferenceAnchor = 8BD71C052DEE41D800CEDD92 /* Config */;
 			baseConfigurationReferenceRelativePath = Tests.xcconfig;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				GENERATE_INFOPLIST_FILE = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -603,7 +608,9 @@
 			baseConfigurationReferenceAnchor = 8BD71C052DEE41D800CEDD92 /* Config */;
 			baseConfigurationReferenceRelativePath = Tests.xcconfig;
 			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				GENERATE_INFOPLIST_FILE = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -612,13 +619,13 @@
 			};
 			name = Release;
 		};
-
 		8BA1000B2DEDD0D5001A66F9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 8BD71C052DEE41D800CEDD92 /* Config */;
 			baseConfigurationReferenceRelativePath = Tunnel.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				INFOPLIST_FILE = IranVPNTunnel/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -640,6 +647,7 @@
 			baseConfigurationReferenceRelativePath = Tunnel.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
 				INFOPLIST_FILE = IranVPNTunnel/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -655,14 +663,14 @@
 			};
 			name = Release;
 		};
-
 		8BA2000C2DEDD0D5001A66F9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 8BD71C052DEE41D800CEDD92 /* Config */;
 			baseConfigurationReferenceRelativePath = TunnelXray.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = IranVPNTunnel/Info-Xray.plist;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
+				INFOPLIST_FILE = "IranVPNTunnel/Info-Xray.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -683,7 +691,8 @@
 			baseConfigurationReferenceRelativePath = TunnelXray.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_FILE = IranVPNTunnel/Info-Xray.plist;
+				DEVELOPMENT_TEAM = 9SA68Z35FA;
+				INFOPLIST_FILE = "IranVPNTunnel/Info-Xray.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -748,13 +757,22 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		8B41F6902DEDD23B001A66F9 /* XCLocalSwiftPackageReference "IranVPNPackage" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = IranVPNPackage;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		8B41F6822DEDD23B001A66F9 /* IranVPNFeature */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 8B41F6902DEDD23B001A66F9 /* XCLocalSwiftPackageReference "IranVPNPackage" */;
 			productName = IranVPNFeature;
 		};
 		8B41F6842DEDD25C001A66F9 /* IranVPNFeature */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 8B41F6902DEDD23B001A66F9 /* XCLocalSwiftPackageReference "IranVPNPackage" */;
 			productName = IranVPNFeature;
 		};
 /* End XCSwiftPackageProductDependency section */

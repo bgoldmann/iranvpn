@@ -2,13 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>com.apple.developer.networking.networkextension</key>
-	<array>
-		<string>packet-tunnel-provider</string>
-	</array>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.goldmannllc.IranVPN</string>
-	</array>
+	<!-- Intentionally empty for Automatic Signing.
+	     Packet Tunnel needs com.apple.developer.networking.networkextension on the App ID.
+	     After enabling Network Extensions → Packet Tunnel in the developer portal, copy
+	     IranVPN-NetworkExtension.entitlements over this file (or point CODE_SIGN_ENTITLEMENTS at it). -->
 </dict>
 </plist>

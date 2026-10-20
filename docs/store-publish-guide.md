@@ -175,8 +175,7 @@ Unauthorized VPN use may be illegal in some countries. This app is for research 
    - `com.goldmannllc.IranVPN.tunnel`
    - `com.goldmannllc.IranVPN.tunnel.xray`
 3. Enable **Network Extensions → Packet Tunnel** on all three (requires Apple approval for distribution).
-4. Create App Group: `group.com.goldmannllc.IranVPN` and attach to all three.
-5. Request **Network Extension** entitlement approval if not already granted (App Store VPN apps need this).
+4. Request **Network Extension** entitlement approval if not already granted (App Store VPN apps need this). App Groups are optional (not required by the current client).
 6. In Xcode: set **Team** (Goldmann LLC), fetch profiles, Archive → Distribute App → App Store Connect.
 
 ### B. Create the app record

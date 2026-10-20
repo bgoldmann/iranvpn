@@ -13,13 +13,25 @@ Swift + SwiftUI app; uses `core` as static lib or XCFramework. Tunnel via Networ
 3. Two Packet Tunnel extensions are embedded (separate processes — both frameworks ship a Go runtime):
    - `IranVPNTunnel` → `com.goldmannllc.IranVPN.tunnel` (Psiphon, zero-config)
    - `IranVPNTunnelXray` → `com.goldmannllc.IranVPN.tunnel.xray` (LibXray, share links)
-4. Enable Network Extensions (Packet Tunnel) on the App ID and both extension IDs for your team.
+4. **Signing / real VPN on device** (fixes “VPN not available — Packet Tunnel entitlement missing”):
+   1. Paid Apple Developer Program team (Personal Team cannot use Packet Tunnel).
+   2. [Identifiers](https://developer.apple.com/account/resources/identifiers/list) → enable **Network Extensions → Packet Tunnel** on `com.goldmannllc.IranVPN`, `com.goldmannllc.IranVPN.tunnel`, `com.goldmannllc.IranVPN.tunnel.xray`.
+   3. Edit `ios/Config/NetworkExtension.xcconfig`: set `IRANVPN_ENTITLEMENTS_SUFFIX = -NetworkExtension`
+   4. Xcode → Signing & Capabilities → select your team → Clean Build Folder → run on device.
+   5. Psiphon: fill `IranVPNTunnel/Resources/psiphon-config.json` + embedded server entries (see [`docs/psiphon-integration.md`](../docs/psiphon-integration.md)).
 5. Connect uses `NETunnelProviderManager` and **never** reports Connected until system VPN status is `.connected`. With an imported share link, the host selects the Xray extension; otherwise Psiphon.
-6. Store checklist: `PrivacyInfo.xcprivacy`, App Icon asset catalog, encryption export compliance (`ITSAppUsesNonExemptEncryption`), App Group `group.com.goldmannllc.IranVPN`.
+6. Store checklist: `PrivacyInfo.xcprivacy`, App Icon asset catalog, encryption export compliance (`ITSAppUsesNonExemptEncryption`).
 
-## Conduit on iOS
+## Providers on iOS
 
-Conduit station is **not** available on iOS. Users get Psiphon direct + imported Xray share links only.
+| Path | Status |
+|------|--------|
+| Psiphon | Default Connect |
+| Conduit / in-proxy | **On hold** — awaiting Psiphon distributor keys; personal-code field ready |
+| Xray (vless/vmess/trojan/`ss://`) | Advanced import → `IranVPNTunnelXray` |
+| sing-box / Hy2 / Tor | Not in-app yet — see [`docs/apple-providers.md`](../docs/apple-providers.md) |
+
+Conduit **station** (volunteer) is not available on iOS from Psiphon.
 
 ## Probe and kill switch
 
@@ -27,7 +39,8 @@ Conduit station is **not** available on iOS. Users get Psiphon direct + imported
 
 ## Capabilities
 
-- Enable Network Extensions and Packet Tunnel in Signing & Capabilities.
+- Default: no `com.apple.developer.networking.networkextension` in the active entitlements (avoids the “not found in profile” signing error).
+- VPN on device: enable Packet Tunnel on the App IDs, then switch to `IranVPN-NetworkExtension.entitlements` / `IranVPNTunnel-NetworkExtension.entitlements`. Personal Team cannot use Packet Tunnel.
 
 ---
 

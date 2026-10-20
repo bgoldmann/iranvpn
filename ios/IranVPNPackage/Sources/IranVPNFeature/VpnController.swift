@@ -2,6 +2,18 @@ import Foundation
 import NetworkExtension
 import Observation
 
+/// Holds the NEVPN observer token so `deinit` need not touch MainActor/`@Observable` state.
+private final class VpnStatusObserverBox: @unchecked Sendable {
+    var token: NSObjectProtocol?
+
+    func invalidate() {
+        if let token {
+            NotificationCenter.default.removeObserver(token)
+            self.token = nil
+        }
+    }
+}
+
 /// Manages NETunnelProviderManager — never reports Connected without system VPN status.
 @Observable
 @MainActor
@@ -29,6 +41,14 @@ final class VpnController {
     private let psiphonTunnelBundleId = "com.goldmannllc.IranVPN.tunnel"
     private let xrayTunnelBundleId = "com.goldmannllc.IranVPN.tunnel.xray"
     private let shareLinkKey = "importedShareLink"
+    @ObservationIgnored
+    private let statusObserver = VpnStatusObserverBox()
+    /// Skip NE APIs after permission denied (or on Simulator, where Packet Tunnel cannot run).
+    @ObservationIgnored
+    private var networkExtensionDenied = false
+    /// Bumped on disconnect/cancel so an in-flight connect loop exits cleanly.
+    @ObservationIgnored
+    private var connectGeneration = 0
 
     /// True when the Xray Packet Tunnel appex was embedded in this build.
     var xrayExtensionAvailable: Bool {
@@ -37,8 +57,6 @@ final class VpnController {
             atPath: plugins.appendingPathComponent("IranVPNTunnelXray.appex").path
         )
     }
-    /// Stored for removal in `deinit` (nonisolated).
-    private nonisolated(unsafe) var statusObserver: NSObjectProtocol?
 
     private var preferredTunnelBundleId: String {
         if xrayExtensionAvailable, let link = importedShareLink, !link.isEmpty {
@@ -49,21 +67,15 @@ final class VpnController {
 
     init() {
         importedShareLink = UserDefaults.standard.string(forKey: shareLinkKey)
-        statusObserver = NotificationCenter.default.addObserver(
-            forName: .NEVPNStatusDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                await self?.refreshStatus()
-            }
-        }
+#if targetEnvironment(simulator)
+        // Packet Tunnel cannot run in Simulator — skip all NE APIs (avoids XPC / config noise).
+        networkExtensionDenied = true
+        errorMessage = Self.simulatorUnavailableMessage
+#endif
     }
 
     deinit {
-        if let statusObserver {
-            NotificationCenter.default.removeObserver(statusObserver)
-        }
+        statusObserver.invalidate()
     }
 
     func clearShareLink() {
@@ -71,8 +83,10 @@ final class VpnController {
     }
 
     func refreshStatus() async {
+        guard !networkExtensionDenied else { return }
         do {
             let managers = try await NETunnelProviderManager.loadAllFromPreferences()
+            installStatusObserverIfNeeded()
             let manager = preferredManager(from: managers)
             guard let manager else {
                 isConnected = false
@@ -83,11 +97,18 @@ final class VpnController {
         } catch {
             isConnected = false
             isConnecting = false
+            handleConfigurationError(error)
         }
     }
 
     func connect() async {
         errorMessage = nil
+        if networkExtensionDenied {
+            errorMessage = Self.networkExtensionSetupMessage
+            return
+        }
+        connectGeneration += 1
+        let generation = connectGeneration
         isConnecting = true
         isConnected = false
         activePath = nil
@@ -106,6 +127,13 @@ final class VpnController {
                 } else {
                     providerConfig.removeValue(forKey: "share_link")
                 }
+                if let compartment = UserDefaults.standard.string(forKey: "conduitPersonalCompartment"),
+                   !compartment.isEmpty
+                {
+                    providerConfig["InproxyClientPersonalCompartmentID"] = compartment
+                } else {
+                    providerConfig.removeValue(forKey: "InproxyClientPersonalCompartmentID")
+                }
                 providerConfig["bootstrap"] = "embedded"
                 proto.providerConfiguration = providerConfig
                 proto.providerBundleIdentifier = bundleId
@@ -117,11 +145,21 @@ final class VpnController {
             try await manager.saveToPreferences()
             try await manager.loadFromPreferences()
 
+            // Reconnect requires a fully stopped tunnel — start while .disconnecting fails silently.
+            try await ensureTunnelStopped(manager)
+            guard generation == connectGeneration else { return }
+
             try manager.connection.startVPNTunnel()
-            let intendedPath = importedShareLink?.isEmpty == false ? "Xray" : "Psiphon"
+            installStatusObserverIfNeeded()
+            let intendedPath =
+                (xrayExtensionAvailable && importedShareLink?.isEmpty == false) ? "Xray" : "Psiphon"
 
             var sawActivity = false
             for i in 0..<120 {
+                guard generation == connectGeneration else {
+                    isConnecting = false
+                    return
+                }
                 try await Task.sleep(for: .milliseconds(500))
                 let status = manager.connection.status
                 apply(status: status)
@@ -141,6 +179,7 @@ final class VpnController {
                     break
                 }
             }
+            guard generation == connectGeneration else { return }
             isConnecting = false
             activePath = nil
             if !isConnected {
@@ -148,29 +187,97 @@ final class VpnController {
                     "Tunnel did not connect — run scripts/fetch-ios-tunnel-deps.sh, embed \(bundleId), and enable Network Extension signing."
             }
         } catch {
+            guard generation == connectGeneration else { return }
             isConnecting = false
             isConnected = false
             activePath = nil
-            errorMessage = error.localizedDescription
+            if isNetworkExtensionPermissionDenied(error) {
+                handleConfigurationError(error)
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
     func disconnect() async {
+        connectGeneration += 1
+        errorMessage = nil
+        isConnected = false
+        isConnecting = false
+        activePath = nil
+        guard !networkExtensionDenied else { return }
         do {
             let managers = try await NETunnelProviderManager.loadAllFromPreferences()
             let bundleId = preferredTunnelBundleId
             if let manager = preferredManager(from: managers, bundleId: bundleId) {
                 manager.connection.stopVPNTunnel()
+                await waitUntilTunnelStopped(manager)
             } else {
-                // Fall back: stop any Iran VPN tunnel that is active.
                 for manager in managers where isIranVPN(manager) {
                     manager.connection.stopVPNTunnel()
                 }
             }
-        } catch {}
+        } catch {
+            handleConfigurationError(error)
+        }
         isConnected = false
         isConnecting = false
         activePath = nil
+    }
+
+    /// Stop if needed, then wait until NEVPN is idle so a new startVPNTunnel can succeed.
+    private func ensureTunnelStopped(_ manager: NETunnelProviderManager) async throws {
+        let status = manager.connection.status
+        if status == .disconnected || status == .invalid { return }
+        manager.connection.stopVPNTunnel()
+        await waitUntilTunnelStopped(manager)
+    }
+
+    private func waitUntilTunnelStopped(_ manager: NETunnelProviderManager) async {
+        for _ in 0..<50 {
+            let status = manager.connection.status
+            if status == .disconnected || status == .invalid { return }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    private static let networkExtensionSetupMessage =
+        "VPN not available — Packet Tunnel entitlement missing. Enable it on the App IDs in the Apple Developer portal, set IRANVPN_ENTITLEMENTS_SUFFIX=-NetworkExtension in ios/Config/NetworkExtension.xcconfig, rebuild. Details: ios/README.md"
+
+    private static let simulatorUnavailableMessage =
+        "Simulator cannot run Packet Tunnel VPN. Build & run on a physical iPhone to Connect."
+
+    private func installStatusObserverIfNeeded() {
+        guard statusObserver.token == nil, !networkExtensionDenied else { return }
+        statusObserver.token = NotificationCenter.default.addObserver(
+            forName: .NEVPNStatusDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            // Apply status directly — avoid nested loadAllFromPreferences + Task hop storms.
+            let status = (notification.object as? NEVPNConnection)?.status
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let status {
+                    self.apply(status: status)
+                } else {
+                    await self.refreshStatus()
+                }
+            }
+        }
+    }
+
+    private func handleConfigurationError(_ error: Error) {
+        guard isNetworkExtensionPermissionDenied(error) else { return }
+        networkExtensionDenied = true
+        statusObserver.invalidate()
+        errorMessage = Self.networkExtensionSetupMessage
+    }
+
+    private func isNetworkExtensionPermissionDenied(_ error: Error) -> Bool {
+        let ns = error as NSError
+        if ns.domain == "NEConfigurationErrorDomain", ns.code == 10 { return true }
+        return ns.localizedDescription.localizedCaseInsensitiveContains("permission denied")
     }
 
     private func apply(status: NEVPNStatus) {
@@ -181,7 +288,14 @@ final class VpnController {
         case .connecting, .reasserting:
             isConnecting = true
             isConnected = false
-        default:
+        case .disconnecting:
+            // Do not treat as "connecting" — keep Connect available after stop.
+            isConnected = false
+            isConnecting = false
+        case .disconnected, .invalid:
+            isConnected = false
+            isConnecting = false
+        @unknown default:
             isConnected = false
             isConnecting = false
         }
@@ -223,6 +337,7 @@ final class VpnController {
             else { continue }
             if manager.connection.status != .disconnected && manager.connection.status != .invalid {
                 manager.connection.stopVPNTunnel()
+                await waitUntilTunnelStopped(manager)
             }
         }
     }

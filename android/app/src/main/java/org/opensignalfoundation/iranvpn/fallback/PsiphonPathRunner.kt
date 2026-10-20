@@ -106,10 +106,12 @@ class PsiphonPathRunner(private val context: Context) : PathRunner, SocksProxyPr
         tunnelInstance = newTunnel
         newTunnel?.javaClass?.getMethod("setVpnMode", Boolean::class.javaPrimitiveType)
             ?.invoke(newTunnel, false)
+        // startTunneling(embeddedServerEntries) — empty string = no bootstrap servers.
+        val embedded = loadEmbeddedServerEntries()
         newTunnel?.javaClass?.getMethod("startTunneling", String::class.java)
-            ?.invoke(newTunnel, "")
+            ?.invoke(newTunnel, embedded)
 
-        val ok = latch.await(90, TimeUnit.SECONDS)
+        val ok = latch.await(120, TimeUnit.SECONDS)
         if (!ok) {
             disconnect()
             return PathResult.Failure(errorHolder[0] ?: "Psiphon connection timeout")
@@ -142,15 +144,59 @@ class PsiphonPathRunner(private val context: Context) : PathRunner, SocksProxyPr
     }
 
     private fun psiphonConfigJson(): String {
-        return """
+        // Prefer local override, then assets/psiphon/psiphon-config.json (from shared/psiphon).
+        var base = readAssetText("psiphon/psiphon-config.local.json")
+            ?: readAssetText("psiphon/psiphon-config.json")
+            ?: """
             {
+              "ClientVersion": "1",
+              "PropagationChannelId": "07D1ACD69B3AC7A2",
+              "SponsorId": "EE0B7486ACAE75AA",
               "EmitDiagnosticNotices": false,
-              "EstablishTunnelTimeoutSeconds": 60,
+              "EstablishTunnelTimeoutSeconds": 120,
               "LocalSocksProxyPort": 0,
               "LocalHttpProxyPort": 0,
               "DisableLocalSocksAuth": true
             }
-        """.trimIndent()
+            """.trimIndent()
+        // Conduit personal pairing — forces in-proxy-only to matching stations.
+        val compartment = org.opensignalfoundation.iranvpn.ConduitPrefs
+            .getPersonalCompartmentId(context)
+        if (!compartment.isNullOrBlank()) {
+            base = injectJsonStringField(base, "InproxyClientPersonalCompartmentID", compartment)
+        }
+        return base
+    }
+
+    private fun injectJsonStringField(json: String, key: String, value: String): String {
+        return try {
+            val obj = org.json.JSONObject(json)
+            obj.put(key, value)
+            obj.toString()
+        } catch (_: Exception) {
+            json
+        }
+    }
+
+    /** Hex-encoded server entries for startTunneling; empty = connect will fail without remote list. */
+    private fun loadEmbeddedServerEntries(): String {
+        val candidates = listOf(
+            "psiphon/psiphon-embedded-server-entries.local.txt",
+            "psiphon/psiphon-embedded-server-entries.txt",
+        )
+        for (path in candidates) {
+            val text = readAssetText(path)?.trim().orEmpty()
+            if (text.isNotEmpty()) return text
+        }
+        return ""
+    }
+
+    private fun readAssetText(path: String): String? {
+        return try {
+            context.assets.open(path).bufferedReader().use { it.readText() }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     override fun disconnect() {

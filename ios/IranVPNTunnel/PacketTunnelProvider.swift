@@ -21,10 +21,11 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         let proto = protocolConfiguration as? NETunnelProviderProtocol
         let shareLink = proto?.providerConfiguration?["share_link"] as? String
         let configuredPort = proto?.providerConfiguration?["socks_port"] as? Int
+        let compartment = proto?.providerConfiguration?["InproxyClientPersonalCompartmentID"] as? String
 
         if let port = configuredPort, port > 0 {
             socksPort = port
-        } else if let port = try await startEmbeddedPath(shareLink: shareLink) {
+        } else if let port = try await startEmbeddedPath(shareLink: shareLink, compartment: compartment) {
             socksPort = port
         } else {
             throw TunnelError.pathUnavailable
@@ -38,7 +39,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         startPacketLoop()
     }
 
-    private func startEmbeddedPath(shareLink: String?) async throws -> Int? {
+    private func startEmbeddedPath(shareLink: String?, compartment: String?) async throws -> Int? {
 #if PATH_XRAY
         guard let link = shareLink, !link.isEmpty else {
             throw TunnelError.pathUnavailable
@@ -50,51 +51,50 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 #elseif PATH_PSIPHON
         _ = shareLink
         let controller = PsiphonTunnelController()
+        controller.personalCompartmentId = compartment
         psiphon = controller
         let port = try await controller.start()
         return port
 #else
         _ = shareLink
+        _ = compartment
         // Deps not fetched / flags not set — fail clearly
         return nil
 #endif
     }
 
     private func probeSocksReady(port: Int) async -> Bool {
-        await withCheckedContinuation { cont in
-            DispatchQueue.global().async {
-                let sock = CFSocketCreate(
-                    kCFAllocatorDefault,
-                    PF_INET,
-                    SOCK_STREAM,
-                    IPPROTO_TCP,
-                    0,
-                    nil,
-                    nil
-                )
-                defer {
-                    if let sock {
-                        CFSocketInvalidate(sock)
-                    }
+        // Detached task avoids hopping from Swift concurrency into DispatchQueue.global
+        // (reduces “unsafeForcedSync from concurrent context” noise around NE start).
+        await Task.detached(priority: .utility) {
+            let sock = CFSocketCreate(
+                kCFAllocatorDefault,
+                PF_INET,
+                SOCK_STREAM,
+                IPPROTO_TCP,
+                0,
+                nil,
+                nil
+            )
+            defer {
+                if let sock {
+                    CFSocketInvalidate(sock)
                 }
-                guard sock != nil else {
-                    cont.resume(returning: false)
-                    return
-                }
-                var addr = sockaddr_in()
-                addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-                addr.sin_family = sa_family_t(AF_INET)
-                addr.sin_port = in_port_t(UInt16(port)).bigEndian
-                addr.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
-                let data = withUnsafePointer(to: &addr) {
-                    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                        NSData(bytes: sa, length: MemoryLayout<sockaddr_in>.size)
-                    }
-                }
-                let err = CFSocketConnectToAddress(sock, data as CFData, 3.0)
-                cont.resume(returning: err == .success)
             }
-        }
+            guard sock != nil else { return false }
+            var addr = sockaddr_in()
+            addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            addr.sin_family = sa_family_t(AF_INET)
+            addr.sin_port = in_port_t(UInt16(port)).bigEndian
+            addr.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
+            let data = withUnsafePointer(to: &addr) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    NSData(bytes: sa, length: MemoryLayout<sockaddr_in>.size)
+                }
+            }
+            let err = CFSocketConnectToAddress(sock, data as CFData, 3.0)
+            return err == .success
+        }.value
     }
 
     private func startPacketLoop() {

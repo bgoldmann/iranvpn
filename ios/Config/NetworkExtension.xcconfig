@@ -1,0 +1,5 @@
+// Flip ON after enabling Network Extensions → Packet Tunnel on App IDs
+// (com.goldmannllc.IranVPN, .tunnel, .tunnel.xray) in the Apple Developer portal.
+//
+// Enabled for device VPN builds — requires Packet Tunnel on App IDs (paid team).
+IRANVPN_ENTITLEMENTS_SUFFIX = -NetworkExtension

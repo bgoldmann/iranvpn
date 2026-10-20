@@ -161,6 +161,7 @@ Details: [`ios/README.md`](ios/README.md) · Store listing copy: [`docs/store-pu
 | [Legal disclaimer](docs/legal-disclaimer.md) | Legal + operational security |
 | [Protocol integration](docs/protocol-integration.md) | Adding / wiring path runners |
 | [Store publish guide](docs/store-publish-guide.md) | App Store & Play titles, keywords, URLs |
+| [Psiphon integration](docs/psiphon-integration.md) | NE entitlements, bundled config, Psiphon Inc keys |
 | [Distribution](docs/distribution.md) | Config publishing |
 
 ### Research report chapters

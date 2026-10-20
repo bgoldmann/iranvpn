@@ -13,6 +13,14 @@ pub enum PathKind {
     Psiphon,
     Conduit,
     Xray,
+    /// sing-box multi-protocol (Hysteria2, Reality, TUIC, SS2022, …)
+    SingBox,
+    /// Tor (+ optional Snowflake / WebTunnel bridge lines)
+    Tor,
+    /// Outline / Shadowsocks access key
+    Outline,
+    /// AmneziaWG obfuscated WireGuard
+    AmneziaWg,
     Rostam,
     /// User-imported custom (VLESS/VMess/Trojan/WireGuard)
     Custom,
@@ -25,16 +33,41 @@ pub enum PathConfig {
     Psiphon {
         #[serde(skip_serializing_if = "Option::is_none")]
         server_list_url: Option<String>,
+        /// Optional Conduit personal pairing (InproxyClientPersonalCompartmentID).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        inproxy_client_personal_compartment_id: Option<String>,
     },
     Conduit {
         #[serde(skip_serializing_if = "Option::is_none")]
         discovery_url: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        personal_compartment_id: Option<String>,
     },
     Xray {
         /// VLESS, VMess, or Trojan config (JSON or share link).
         config_json: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         subscription_url: Option<String>,
+    },
+    SingBox {
+        config_json: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        subscription_url: Option<String>,
+    },
+    Tor {
+        /// Optional bridge lines (Snowflake / WebTunnel / obfs4); empty = default Tor.
+        #[serde(default)]
+        bridges: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        socks_port: Option<u16>,
+    },
+    Outline {
+        /// Outline ss:// access key or SIP002 URI.
+        access_key: String,
+    },
+    AmneziaWg {
+        /// AmneziaWG / AWG config (INI-style).
+        config: String,
     },
     Rostam {
         /// Rostam-style obfuscated WireGuard config (INI or share link).
@@ -48,6 +81,10 @@ impl PathConfig {
             PathConfig::Psiphon { .. } => PathKind::Psiphon,
             PathConfig::Conduit { .. } => PathKind::Conduit,
             PathConfig::Xray { .. } => PathKind::Xray,
+            PathConfig::SingBox { .. } => PathKind::SingBox,
+            PathConfig::Tor { .. } => PathKind::Tor,
+            PathConfig::Outline { .. } => PathKind::Outline,
+            PathConfig::AmneziaWg { .. } => PathKind::AmneziaWg,
             PathConfig::Rostam { .. } => PathKind::Rostam,
         }
     }
@@ -99,6 +136,30 @@ pub fn parse_vless_share(link: &str) -> Result<PathConfig, ConfigError> {
     })
 }
 
+/// Parse Outline / Shadowsocks SIP002 (`ss://`) access key.
+pub fn parse_outline_access_key(key: &str) -> Result<PathConfig, ConfigError> {
+    let t = key.trim();
+    if !(t.starts_with("ss://") || t.starts_with("SS://")) {
+        return Err(ConfigError::UnsupportedProtocol("expected ss://".into()));
+    }
+    Ok(PathConfig::Outline {
+        access_key: t.to_string(),
+    })
+}
+
+/// Parse sing-box JSON config (must contain an inbound socks on loopback).
+pub fn parse_singbox_json(json: &str) -> Result<PathConfig, ConfigError> {
+    let v: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| ConfigError::Parse(e.to_string()))?;
+    if !v.is_object() {
+        return Err(ConfigError::Parse("sing-box config must be a JSON object".into()));
+    }
+    Ok(PathConfig::SingBox {
+        config_json: json.to_string(),
+        subscription_url: None,
+    })
+}
+
 /// Parse VMess share link or base64 payload.
 pub fn parse_vmess_share(link: &str) -> Result<PathConfig, ConfigError> {
     let config_json = if link.starts_with("vmess://") {
@@ -146,6 +207,7 @@ mod tests {
     fn path_config_kind() {
         let p = PathConfig::Psiphon {
             server_list_url: None,
+            inproxy_client_personal_compartment_id: None,
         };
         assert_eq!(p.kind(), PathKind::Psiphon);
     }

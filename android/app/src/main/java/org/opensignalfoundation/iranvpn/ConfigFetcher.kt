@@ -11,7 +11,9 @@ import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
 /**
- * Bootstrap: last-good → embedded → optional network fetch.
+ * Bootstrap: last-good → network → embedded.
+ * Offline-first on purpose (censored nets can't reach GitHub before a tunnel is up).
+ * Remote refresh after SOCKS is the client's job once connected.
  */
 object ConfigFetcher {
     private const val LAST_GOOD_FILE = "last_good_server_list.json"
@@ -82,18 +84,7 @@ object ConfigFetcher {
         val paths = JSONArray()
         for (p in list.paths) {
             paths.put(
-                when (p) {
-                    is PathConfig.PsiphonConfig ->
-                        JSONObject().put("type", "psiphon").put("server_list_url", p.serverListUrl ?: JSONObject.NULL)
-                    is PathConfig.ConduitConfig ->
-                        JSONObject().put("type", "conduit").put("discovery_url", p.discoveryUrl ?: JSONObject.NULL)
-                    is PathConfig.XrayConfig ->
-                        JSONObject().put("type", "xray")
-                            .put("config_json", p.configJson)
-                            .put("subscription_url", p.subscriptionUrl ?: JSONObject.NULL)
-                    is PathConfig.RostamConfig ->
-                        JSONObject().put("type", "rostam").put("wireguard_config", p.wireguardConfig)
-                }
+                PathConfig.toJson(p)
             )
         }
         obj.put("paths", paths)

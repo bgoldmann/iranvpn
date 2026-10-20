@@ -8,7 +8,9 @@ CURRENT_PROJECT_VERSION = 1
 SKIP_INSTALL = YES
 GENERATE_INFOPLIST_FILE = NO
 INFOPLIST_FILE = IranVPNTunnel/Info-Xray.plist
-CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel.entitlements
+#include "NetworkExtension.xcconfig"
+CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel$(IRANVPN_ENTITLEMENTS_SUFFIX).entitlements
+CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] = IranVPNTunnel/IranVPNTunnel-Simulator.entitlements
 CODE_SIGN_STYLE = Automatic
 IPHONEOS_DEPLOYMENT_TARGET = 18.4
 TARGETED_DEVICE_FAMILY = 1,2

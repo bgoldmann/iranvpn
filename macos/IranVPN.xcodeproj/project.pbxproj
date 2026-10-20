@@ -278,6 +278,9 @@
 			);
 			mainGroup = 8BC265532DEDD3F400F279A4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8B90D1502DEDD44A00FBD189 /* XCLocalSwiftPackageReference "IranVPNPackage" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8BC2655D2DEDD3F400F279A4 /* Products */;
 			projectDirPath = "";
@@ -477,9 +480,17 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		8B90D1502DEDD44A00FBD189 /* XCLocalSwiftPackageReference "IranVPNPackage" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = IranVPNPackage;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		8B90D1472DEDD44A00FBD189 /* IranVPNFeature */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 8B90D1502DEDD44A00FBD189 /* XCLocalSwiftPackageReference "IranVPNPackage" */;
 			productName = IranVPNFeature;
 		};
 /* End XCSwiftPackageProductDependency section */

@@ -5,7 +5,7 @@ Windows client using `core` as a native lib. Path race + SOCKS probe; system-wid
 ## Stack
 
 - **Rust** app with egui UI; links to `iran-vpn-core`.
-- **Local SOCKS:** Psiphon / Xray on PATH; Connect succeeds only after a SOCKS probe.
+- **Local SOCKS:** Race Psiphon → Xray → sing-box → Tor → Outline (`ss://` via sing-box) when binaries are on PATH; Connect succeeds only after a SOCKS probe.
 - **Wintun:** code exists but is **not** started on Connect — a drop-only TUN would blackhole the OS.
 
 ## Build
@@ -23,7 +23,10 @@ Requires: Rust, Windows SDK. Wintun DLL is fetched automatically by the `wintun`
 cargo run -p iran-vpn-windows --release
 ```
 
-Place `psiphon-tunnel-core` and/or `xray` on PATH. Connect tries Psiphon (then Xray if present), probes via SOCKS, and reports **Local SOCKS ready** — not a system VPN.
+Place `psiphon-tunnel-core`, `xray`, `sing-box`, and/or `tor` on PATH. Connect races available paths (order matches Android/core), probes via SOCKS, and reports **Local SOCKS ready** — not a system VPN.
+
+Psiphon config: `windows/psiphon/psiphon.config` (synced from `shared/psiphon` via
+`./scripts/sync-psiphon-bootstrap.sh`). Override with `IRAN_VPN_PSIPHON_CONFIG`. Expects local SOCKS on **1080**.
 
 **Demo (no binaries):** `IRAN_VPN_DEMO=1 cargo run -p iran-vpn-windows --release`
 

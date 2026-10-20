@@ -8,8 +8,10 @@ CURRENT_PROJECT_VERSION = 1
 SKIP_INSTALL = YES
 GENERATE_INFOPLIST_FILE = NO
 INFOPLIST_FILE = IranVPNTunnel/Info.plist
-CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel.entitlements
+#include "NetworkExtension.xcconfig"
+CODE_SIGN_ENTITLEMENTS = IranVPNTunnel/IranVPNTunnel$(IRANVPN_ENTITLEMENTS_SUFFIX).entitlements
 CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM = 9SA68Z35FA
 MACOSX_DEPLOYMENT_TARGET = 15.4
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks @executable_path/../../../../Frameworks
 ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO

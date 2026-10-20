@@ -11,6 +11,8 @@ PRODUCT_DISPLAY_NAME = Iran VPN
 PRODUCT_BUNDLE_IDENTIFIER = com.goldmannllc.IranVPN
 MARKETING_VERSION = 1.0
 CURRENT_PROJECT_VERSION = 1
+DEVELOPMENT_TEAM = 9SA68Z35FA
+CODE_SIGN_STYLE = Automatic
 
 // ==========================================
 // Platform Configuration
@@ -26,5 +28,5 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 // ==========================================
 // Entitlements
 // ==========================================
-// AI agents can modify Config/IranVPN.entitlements to add capabilities
-CODE_SIGN_ENTITLEMENTS = Config/IranVPN.entitlements
+#include "NetworkExtension.xcconfig"
+CODE_SIGN_ENTITLEMENTS = Config/IranVPN$(IRANVPN_ENTITLEMENTS_SUFFIX).entitlements

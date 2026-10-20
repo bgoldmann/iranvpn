@@ -26,6 +26,20 @@ object ShareLinkParser {
                 configJson = trimmed,
                 subscriptionUrl = null,
             )
+            trimmed.startsWith("ss://", ignoreCase = true) ->
+                PathConfig.OutlineConfig(accessKey = trimmed)
+            trimmed.startsWith("hy2://") || trimmed.startsWith("hysteria2://") ->
+                PathConfig.SingBoxConfig(configJson = trimmed, subscriptionUrl = null)
+            trimmed.trimStart().startsWith("{") && trimmed.contains("\"inbounds\"") ->
+                PathConfig.SingBoxConfig(configJson = trimmed, subscriptionUrl = null)
+            trimmed.contains("[Interface]", ignoreCase = true) &&
+                (trimmed.contains("Jc") || trimmed.contains("Awg") || trimmed.contains("Amnezia", ignoreCase = true)) ->
+                PathConfig.AmneziaWgConfig(config = trimmed)
+            trimmed.contains("[Interface]", ignoreCase = true) ->
+                PathConfig.RostamConfig(wireguardConfig = trimmed)
+            trimmed.startsWith("snowflake ") || trimmed.startsWith("webtunnel ") ||
+                trimmed.startsWith("obfs4 ") || trimmed.startsWith("Bridge ") ->
+                PathConfig.TorConfig(bridges = listOf(trimmed.removePrefix("Bridge ").trim()))
             trimmed.startsWith("http://") || trimmed.startsWith("https://") ->
                 PathConfig.XrayConfig(configJson = "{}", subscriptionUrl = trimmed)
             else -> null

@@ -1,6 +1,13 @@
 # Iran VPN — Android
 
-Android app with fallback chain (Psiphon → Conduit → Xray → Rostam).
+Android app fallback race: **Psiphon** → **Xray** → **sing-box** → **Tor** → **Outline** (`ss://`).
+**Conduit on hold** (awaiting Psiphon email reply). AmneziaWG/Rostam = Advanced-only.
+
+```bash
+./scripts/fetch-sing-box-android.sh   # Outline + Hysteria2 (required for those paths)
+```
+
+See `app/src/main/assets/README.md`.
 
 ## Build
 
@@ -19,6 +26,9 @@ Psiphon Tunnel Core is enabled in `app/build.gradle.kts` (`ca.psiphon:psiphontun
 `PsiphonPathRunner` implements `HostService.protectSocket` via `VpnService.protect()` so
 bridge sockets do not loop into TUN. Conduit P2P is included inside Psiphon — there is
 no separate Conduit path.
+
+Bootstrap config + server entries live in `assets/psiphon/` (synced from `shared/psiphon`
+via `./scripts/sync-psiphon-bootstrap.sh`). `startTunneling` receives the embedded entries.
 
 Build with Java 17+.
 

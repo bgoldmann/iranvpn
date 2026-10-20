@@ -16,13 +16,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import org.opensignalfoundation.iranvpn.fallback.TorPathRunner
 import org.opensignalfoundation.iranvpn.fallback.XrayPathRunner
 import org.opensignalfoundation.iranvpn.model.PathConfig
 import org.opensignalfoundation.iranvpn.model.ServerList
 import org.opensignalfoundation.iranvpn.model.ShareLinkParser
-import org.opensignalfoundation.iranvpn.ui.ConnectScreen
 import org.opensignalfoundation.iranvpn.ui.LegalDisclaimer
+import org.opensignalfoundation.iranvpn.ui.MainShell
 import org.opensignalfoundation.iranvpn.ui.Theme
+
 
 class MainActivity : ComponentActivity() {
 
@@ -97,40 +99,61 @@ class MainActivity : ComponentActivity() {
                     val connecting by remember { connectingState }
                     val activePath by remember { activePathState }
                     val xrayReady = remember { XrayPathRunner.isAvailable(applicationContext) }
-                    ConnectScreen(
+                    var conduitCode by remember {
+                        mutableStateOf(ConduitPrefs.getPersonalCompartmentId(applicationContext).orEmpty())
+                    }
+                    MainShell(
                         isConnected = connected,
                         isConnecting = connecting,
                         activePath = activePath,
                         xrayImportEnabled = xrayReady,
+                        conduitCompartment = conduitCode,
+                        appVersion = try {
+                            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
+                        } catch (_: Exception) {
+                            "1.0.0"
+                        },
+                        onConduitCompartmentChange = { code ->
+                            ConduitPrefs.setPersonalCompartmentId(applicationContext, code)
+                            conduitCode = code
+                        },
                         onConnect = {
                             connectingState.value = true
                             prepareAndConnect()
                         },
                         onDisconnect = {
-                            VpnTunnelService.disconnect(applicationContext)
                             connectionState.value = false
                             connectingState.value = false
                             activePathState.value = null
+                            VpnTunnelService.disconnect(applicationContext)
                         },
                         onImportShareLink = { link ->
-                            if (!XrayPathRunner.isAvailable(applicationContext)) {
-                                return@ConnectScreen false
-                            }
-                            val parsed = ShareLinkParser.parse(link)
-                            if (parsed is PathConfig.XrayConfig) {
-                                val list = ServerList(
-                                    paths = listOf(
-                                        PathConfig.PsiphonConfig(null),
-                                        parsed,
-                                    ),
-                                    sources = emptyList(),
+                            val parsed = ShareLinkParser.parse(link) ?: return@MainShell false
+                            if (parsed is PathConfig.ConduitConfig && !parsed.personalCompartmentId.isNullOrBlank()) {
+                                ConduitPrefs.setPersonalCompartmentId(
+                                    applicationContext,
+                                    parsed.personalCompartmentId,
                                 )
-                                ConfigFetcher.saveLastGood(applicationContext, list)
-                                true
-                            } else {
-                                false
+                                conduitCode = parsed.personalCompartmentId
                             }
-                        }
+                            val paths = mutableListOf<PathConfig>(
+                                PathConfig.PsiphonConfig(
+                                    serverListUrl = null,
+                                    inproxyClientPersonalCompartmentId = ConduitPrefs
+                                        .getPersonalCompartmentId(applicationContext),
+                                ),
+                            )
+                            when (parsed) {
+                                is PathConfig.PsiphonConfig, is PathConfig.ConduitConfig -> Unit
+                                else -> paths.add(parsed)
+                            }
+                            ConfigFetcher.saveLastGood(
+                                applicationContext,
+                                ServerList(paths = paths, sources = emptyList()),
+                            )
+                            true
+                        },
+                        onOpenOrbot = { TorPathRunner.openOrbotPlayStore(applicationContext) },
                     )
                 }
             }

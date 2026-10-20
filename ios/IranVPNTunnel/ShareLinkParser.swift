@@ -1,16 +1,101 @@
 import Foundation
 
-/// Port of Android ShareLinkParser — VLESS / VMess / Trojan → Xray JSON with local SOCKS inbound.
+/// Port of Android ShareLinkParser — VLESS / VMess / Trojan / Outline ss:// → Xray JSON.
+/// Hysteria2 / sing-box-only protocols need a future Libbox appex (not LibXray).
 enum ShareLinkParser {
     static let defaultSocksPort = 10808
 
     static func toXrayJson(_ shareLink: String, socksPort: Int = defaultSocksPort) -> String? {
         let link = shareLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        if link.lowercased().hasPrefix("ss://") { return shadowsocksToJson(link, socksPort: socksPort) }
         if link.hasPrefix("vless://") { return vlessToJson(link, socksPort: socksPort) }
         if link.hasPrefix("vmess://") { return vmessToJson(link, socksPort: socksPort) }
         if link.hasPrefix("trojan://") { return trojanToJson(link, socksPort: socksPort) }
         if link.first == "{" { return ensureSocksInbound(link, port: socksPort) }
         return nil
+    }
+
+    /// Outline / SIP002 `ss://` → Xray shadowsocks outbound (no sing-box required on Apple).
+    private static func shadowsocksToJson(_ link: String, socksPort: Int) -> String? {
+        let raw = String(link.dropFirst(5)) // ss://
+        let main = raw.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? raw
+        let method: String
+        let password: String
+        let host: String
+        let port: Int
+        if let at = main.lastIndex(of: "@") {
+            let userPart = String(main[..<at])
+            var hostPort = String(main[main.index(after: at)...])
+            if let q = hostPort.firstIndex(of: "?") { hostPort = String(hostPort[..<q]) }
+            // SIP002: base64(method:password)@host:port  — or legacy method:password@host:port
+            let userInfo: String
+            if let decoded = decodeBase64(userPart), decoded.contains(":") {
+                userInfo = decoded
+            } else if userPart.contains(":") {
+                userInfo = userPart.removingPercentEncoding ?? userPart
+            } else {
+                return nil
+            }
+            guard let colon = userInfo.firstIndex(of: ":"),
+                  let hp = splitHostPort(hostPort)
+            else { return nil }
+            method = String(userInfo[..<colon])
+            password = String(userInfo[userInfo.index(after: colon)...])
+            host = hp.0
+            port = hp.1
+        } else {
+            guard let plain = decodeBase64(main),
+                  let at = plain.lastIndex(of: "@")
+            else { return nil }
+            let user = String(plain[..<at])
+            var hostPort = String(plain[plain.index(after: at)...])
+            if let q = hostPort.firstIndex(of: "?") { hostPort = String(hostPort[..<q]) }
+            guard let colon = user.firstIndex(of: ":"),
+                  let hp = splitHostPort(hostPort)
+            else { return nil }
+            method = String(user[..<colon])
+            password = String(user[user.index(after: colon)...])
+            host = hp.0
+            port = hp.1
+        }
+        let outbound: [String: Any] = [
+            "protocol": "shadowsocks",
+            "settings": [
+                "servers": [[
+                    "address": host,
+                    "port": port,
+                    "method": method,
+                    "password": password,
+                ]],
+            ],
+            "tag": "proxy",
+        ]
+        return buildFullConfig(socksPort: socksPort, outbound: outbound)
+    }
+
+    private static func decodeBase64(_ s: String) -> String? {
+        let normalized = s
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+            .paddingBase64
+        guard let data = Data(base64Encoded: normalized)
+                ?? Data(base64Encoded: normalized, options: .ignoreUnknownCharacters),
+              let str = String(data: data, encoding: .utf8)
+        else { return nil }
+        return str
+    }
+
+    private static func splitHostPort(_ hostPort: String) -> (String, Int)? {
+        if hostPort.hasPrefix("["), let end = hostPort.firstIndex(of: "]") {
+            let host = String(hostPort[hostPort.index(after: hostPort.startIndex)..<end])
+            let after = hostPort[hostPort.index(after: end)...]
+            guard after.hasPrefix(":"), let p = Int(after.dropFirst()) else { return nil }
+            return (host, p)
+        }
+        guard let colon = hostPort.lastIndex(of: ":"),
+              let p = Int(hostPort[hostPort.index(after: colon)...])
+        else { return nil }
+        return (String(hostPort[..<colon]), p)
     }
 
     private static func vlessToJson(_ link: String, socksPort: Int) -> String? {
@@ -73,7 +158,8 @@ enum ShareLinkParser {
 
     private static func vmessToJson(_ link: String, socksPort: Int) -> String? {
         let raw = String(link.dropFirst("vmess://".count))
-        guard let data = Data(base64Encoded: raw) ?? Data(base64Encoded: raw.paddingBase64),
+        guard let plain = decodeBase64(raw),
+              let data = plain.data(using: .utf8),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let host = obj["add"] as? String,
               let port = (obj["port"] as? Int) ?? Int("\(obj["port"] ?? "")"),

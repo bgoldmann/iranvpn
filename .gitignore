@@ -14,6 +14,8 @@ android/local.properties
 *.keystore
 .env
 .env.*
+**/psiphon-config.local.json
+**/psiphon-embedded-server-entries.local.txt
 
 # IDE
 .idea/
@@ -26,3 +28,9 @@ ios/Vendor/LibXray.xcframework/
 
 # Large duplicate of branding asset (canonical copy under assets/branding/)
 /IranVPN Lion and Sun Cyber Shield.png
+
+# Optional path binaries (fetch via scripts/fetch-sing-box-android.sh etc.)
+android/app/src/main/assets/sing-box/
+android/app/src/main/assets/xray/
+android/app/src/main/assets/tor/
+android/app/src/main/assets/amneziawg/

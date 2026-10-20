@@ -34,5 +34,8 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 // ==========================================
 // Entitlements
 // ==========================================
-// AI agents can modify Config/IranVPN.entitlements to add capabilities
-CODE_SIGN_ENTITLEMENTS = Config/IranVPN.entitlements
+#include "NetworkExtension.xcconfig"
+// Device: empty by default; set IRANVPN_ENTITLEMENTS_SUFFIX = -NetworkExtension after portal.
+// Simulator never gets Packet Tunnel entitlements.
+CODE_SIGN_ENTITLEMENTS = Config/IranVPN$(IRANVPN_ENTITLEMENTS_SUFFIX).entitlements
+CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*] = Config/IranVPN-Simulator.entitlements

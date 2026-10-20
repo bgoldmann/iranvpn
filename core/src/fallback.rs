@@ -1,4 +1,4 @@
-//! Race-and-probe engine: parallel path race (~8s), probe gate, warm spare,
+//! Race-and-probe engine: parallel path race (~90s), probe gate, warm spare,
 //! health loop, exponential backoff after all paths fail. US-002, FR-6.
 
 use crate::config::{PathConfig, PathKind, ServerList};
@@ -11,10 +11,19 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time::timeout;
 use tracing::{info, warn};
 
-/// Default race order: Psiphon (includes Conduit) then Xray. Rostam excluded.
-pub const DEFAULT_PATH_ORDER: [PathKind; 2] = [PathKind::Psiphon, PathKind::Xray];
+/// Default race order after Conduit+Xray foundation.
+/// Conduit is in-proxy inside Psiphon (not a separate path).
+/// AmneziaWG/Rostam stay Advanced-only (UDP whitelist risk).
+pub const DEFAULT_PATH_ORDER: [PathKind; 5] = [
+    PathKind::Psiphon,
+    PathKind::Xray,
+    PathKind::SingBox,
+    PathKind::Tor,
+    PathKind::Outline,
+];
 
-pub const RACE_BUDGET: Duration = Duration::from_secs(8);
+/// Match Android: Psiphon establish can take 60–120s on censored networks.
+pub const RACE_BUDGET: Duration = Duration::from_secs(90);
 pub const HEALTH_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -116,12 +125,20 @@ impl FallbackEngine {
         }
     }
 
-    /// Indices eligible for the race (Psiphon/Xray by default; skip Conduit/Rostam).
+    /// Indices eligible for the race (skip Conduit stub, AmneziaWG/Rostam by default).
     pub fn race_indices(&self) -> Vec<usize> {
         let mut indices: Vec<usize> = (0..self.paths.len())
             .filter(|&i| {
                 let kind = self.paths[i].kind();
-                matches!(kind, PathKind::Psiphon | PathKind::Xray | PathKind::Custom)
+                matches!(
+                    kind,
+                    PathKind::Psiphon
+                        | PathKind::Xray
+                        | PathKind::SingBox
+                        | PathKind::Tor
+                        | PathKind::Outline
+                        | PathKind::Custom
+                )
             })
             .collect();
         indices.sort_by_key(|&i| {
@@ -131,7 +148,6 @@ impl FallbackEngine {
                 .position(|k| k == &kind)
                 .unwrap_or(usize::MAX)
         });
-        indices.truncate(3);
         indices
     }
 
@@ -451,6 +467,7 @@ mod tests {
             },
             PathConfig::Psiphon {
                 server_list_url: None,
+                inproxy_client_personal_compartment_id: None,
             },
         ]);
         let idx = e.race_indices();

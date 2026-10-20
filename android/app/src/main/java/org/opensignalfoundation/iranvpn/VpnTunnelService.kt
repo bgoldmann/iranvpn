@@ -15,10 +15,14 @@ import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.opensignalfoundation.iranvpn.fallback.AmneziaWgPathRunner
 import org.opensignalfoundation.iranvpn.fallback.FallbackOrchestrator
+import org.opensignalfoundation.iranvpn.fallback.OutlinePathRunner
 import org.opensignalfoundation.iranvpn.fallback.PathRunner
 import org.opensignalfoundation.iranvpn.fallback.PsiphonPathRunner
+import org.opensignalfoundation.iranvpn.fallback.SingBoxPathRunner
 import org.opensignalfoundation.iranvpn.fallback.SocksProxyProvider
+import org.opensignalfoundation.iranvpn.fallback.TorPathRunner
 import org.opensignalfoundation.iranvpn.fallback.XrayPathRunner
 import org.opensignalfoundation.iranvpn.metrics.LocalFailureLog
 import org.opensignalfoundation.iranvpn.model.PathKind
@@ -105,6 +109,12 @@ class VpnTunnelService : VpnService() {
                     if (XrayPathRunner.isAvailable(this@VpnTunnelService)) {
                         put(PathKind.XRAY, XrayPathRunner(this@VpnTunnelService))
                     }
+                    if (SingBoxPathRunner.isAvailable(this@VpnTunnelService)) {
+                        put(PathKind.SINGBOX, SingBoxPathRunner(this@VpnTunnelService))
+                        put(PathKind.OUTLINE, OutlinePathRunner(this@VpnTunnelService))
+                    }
+                    put(PathKind.TOR, TorPathRunner(this@VpnTunnelService))
+                    put(PathKind.AMNEZIAWG, AmneziaWgPathRunner(this@VpnTunnelService))
                 }
                 connectedRunners = pathRunners
                 FallbackOrchestrator(serverList, pathRunners).run()
@@ -113,6 +123,11 @@ class VpnTunnelService : VpnService() {
 
         result.fold(
             onSuccess = { pathKind ->
+                // User cancelled / disconnected while the race was still running.
+                if (!running) {
+                    connectedRunners?.values?.forEach { it.disconnect() }
+                    return@fold
+                }
                 val runner = connectedRunners?.get(pathKind)
                 activeRunner = runner
                 val socks = runner as? SocksProxyProvider
@@ -120,6 +135,10 @@ class VpnTunnelService : VpnService() {
                     { socks?.getLocalSocksPort() ?: 0 },
                     timeoutMs = 20_000,
                 )
+                if (!running) {
+                    runner?.disconnect()
+                    return@fold
+                }
                 if (socksPort <= 0) {
                     LocalFailureLog.record(this@VpnTunnelService, pathKind.name, "socks_not_ready")
                     failAndStop("SOCKS not ready")
@@ -139,6 +158,10 @@ class VpnTunnelService : VpnService() {
                     failAndStop("Probe failed: ${probe.exceptionOrNull()?.message}")
                     return@fold
                 }
+                if (!running) {
+                    runner?.disconnect()
+                    return@fold
+                }
                 val listToSave = fetchedList
                 val pathLabel = pathKind.name.lowercase().replaceFirstChar { it.uppercase() }
                 if (!establishTun(socksPort, socks?.supportsUdp() == true, reuseTun = reuseTun)) {
@@ -150,6 +173,13 @@ class VpnTunnelService : VpnService() {
                     return@fold
                 }
                 runOnMain {
+                    if (!running) {
+                        PacketForwarder.stop()
+                        runner?.disconnect()
+                        isConnected = false
+                        isConnecting = false
+                        return@runOnMain
+                    }
                     activePathName = pathLabel
                     isConnected = true
                     isConnecting = false
@@ -161,6 +191,7 @@ class VpnTunnelService : VpnService() {
                 }
             },
             onFailure = {
+                if (!running) return@fold
                 LocalFailureLog.record(this@VpnTunnelService, "race", it.message ?: "all_failed")
                 failAndStop(it.message ?: "all paths failed")
             }
