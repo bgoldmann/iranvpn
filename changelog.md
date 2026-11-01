@@ -9,6 +9,11 @@ All notable changes to this project are documented in this file.
 - **Config mirror Worker** (`cloudflare/config-mirror/`): serves `server-list.json` from R2 or GitHub upstream; clients prefer `https://iranvpn-config.goldmannllc.com/server-list.json`.
 - **Multi-probe gate:** Android, core, iOS, and macOS try Cloudflare trace, then `gstatic` `generate_204` (must be HTTP 204), then Firefox `success.txt`. A Cloudflare-only failure does not fail Connect. A 200 block page does not count as success. Apple sends the probe hostname through SOCKS5.
 - **Publish:** `dist-config/publish.sh` supports `CF_R2=1`; see `docs/cloudflare-config-mirror.md`.
+- **Apple probe:** status line is read only after the line ending, so a short packet cannot turn HTTP 204 into a false failure. While connected, two failed probes tear the system VPN down.
+- **Android config:** Connect uses last-good or the embedded list, then refreshes through SOCKS. An imported path or Psiphon compartment is kept when the published list does not include it. Empty path lists are rejected.
+- **Worker:** refuses an empty or typeless path list, and does not cache a bad upstream body. R2 bucket `iranvpn-config` is bound and serves the list when the object is valid.
+- **Signed lists:** Ed25519 verification is compiled in. The signature is over the canonical JSON of `payload`. Unsigned lists still load until a verify key is configured.
+- **iOS / macOS:** after Connect, the app and the tunnel download `server-list.json` (Worker, then GitHub, then jsDelivr) and keep the last good copy. A published Psiphon `server_list_url` is passed into Psiphon on the next connect.
 
 ## [4.0.0] — 2026-10-19
 

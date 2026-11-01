@@ -13,6 +13,8 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate, @unchecked S
     private var listeningPort: Int = 0
     private(set) var socksPort: Int = 0
     var personalCompartmentId: String?
+    /// Psiphon remote server list from the published IranVPN server list, when set.
+    var remoteServerListURL: String?
 
     func start() async throws -> Int {
         socksPort = 0
@@ -97,7 +99,18 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate, @unchecked S
         if let compartment = personalCompartmentId, !compartment.isEmpty {
             json["InproxyClientPersonalCompartmentID"] = compartment
         }
+        applyRemoteServerList(&json)
         return json
+    }
+
+    private func applyRemoteServerList(_ json: inout [String: Any]) {
+        guard let url = remoteServerListURL?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !url.isEmpty else { return }
+        json["RemoteServerListURLs"] = [[
+            "URL": url,
+            "SkipVerify": false,
+            "OnlyAfterAttempts": 0,
+        ]]
     }
 
     // MARK: - TunneledAppDelegate
@@ -125,6 +138,7 @@ final class PsiphonTunnelController: NSObject, TunneledAppDelegate, @unchecked S
         if let compartment = personalCompartmentId, !compartment.isEmpty {
             fallback["InproxyClientPersonalCompartmentID"] = compartment
         }
+        applyRemoteServerList(&fallback)
         return fallback
     }
 

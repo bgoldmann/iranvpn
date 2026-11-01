@@ -21,6 +21,7 @@ tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "socks"], default-features = false }
 url = "2.5"
 base64 = "0.22"
+ed25519-dalek = { version = "2.1", default-features = false, features = ["std"] }
 tracing = "0.1"
 async-trait = "0.1"
 jni = { version = "0.21", optional = true }

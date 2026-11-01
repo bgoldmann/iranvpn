@@ -59,9 +59,26 @@ pub async fn fetch_server_list_via_socks(
     anyhow::bail!("all config sources failed via socks")
 }
 
+fn require_paths(list: ServerList) -> Result<ServerList> {
+    if list.paths.is_empty() {
+        anyhow::bail!("server list has no paths");
+    }
+    Ok(list)
+}
+
 async fn fetch_one(client: &Client, url: &str) -> Result<ServerList> {
     let resp = client.get(url).send().await?;
     resp.error_for_status_ref()?;
     let text = resp.text().await?;
-    parse_server_list_json(&text)
+    require_paths(parse_server_list_json(&text)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_empty_path_list() {
+        assert!(require_paths(ServerList::default()).is_err());
+    }
 }

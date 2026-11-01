@@ -7,6 +7,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     private let log = OSLog(subsystem: "com.goldmannllc.IranVPN", category: "PacketTunnel")
     private var isRunning = false
     private var socksPort: Int = 0
+    private var healthTask: Task<Void, Never>?
+    private var remoteServerListURL: String?
 #if PATH_PSIPHON
     private var psiphon: PsiphonTunnelController?
 #endif
@@ -19,6 +21,12 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         let shareLink = proto?.providerConfiguration?["share_link"] as? String
         let configuredPort = proto?.providerConfiguration?["socks_port"] as? Int
         let compartment = proto?.providerConfiguration?["InproxyClientPersonalCompartmentID"] as? String
+        let publishedURL = proto?.providerConfiguration?["psiphon_server_list_url"] as? String
+        if let publishedURL, !publishedURL.isEmpty {
+            remoteServerListURL = publishedURL
+        } else {
+            remoteServerListURL = ServerListClient.cachedPsiphonServerListURL()
+        }
 
         if let port = configuredPort, port > 0 {
             socksPort = port
@@ -33,8 +41,35 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw TunnelError.probeFailed
         }
 
+        let refreshPort = socksPort
+        Task { await ServerListClient.refresh(socksPort: refreshPort) }
+
         try await setTunnelNetworkSettings(SocksNetworkSettings.make(socksPort: socksPort))
         readPackets()
+        startHealthLoop()
+    }
+
+    /// Same idea as Android's health loop: two failed probes and the system VPN drops.
+    private func startHealthLoop() {
+        healthTask?.cancel()
+        healthTask = Task { [weak self] in
+            var failures = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard let self, self.isRunning, !Task.isCancelled else { return }
+                let ok = await TunnelConnectivityProbe.probe(socksPort: self.socksPort)
+                guard self.isRunning, !Task.isCancelled else { return }
+                if ok {
+                    failures = 0
+                } else {
+                    failures += 1
+                    if failures >= 2 {
+                        self.cancelTunnelWithError(TunnelError.probeFailed)
+                        return
+                    }
+                }
+            }
+        }
     }
 
     private func startEmbeddedPath(shareLink: String?, compartment: String?) async throws -> Int? {
@@ -42,6 +77,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         _ = shareLink
         let controller = PsiphonTunnelController()
         controller.personalCompartmentId = compartment
+        controller.remoteServerListURL = remoteServerListURL
         psiphon = controller
         return try await controller.start()
 #else
@@ -85,6 +121,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
+        healthTask?.cancel()
+        healthTask = nil
         isRunning = false
         socksPort = 0
 #if PATH_PSIPHON

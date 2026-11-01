@@ -43,7 +43,7 @@ See [dist-config/](../dist-config/) and [cloudflare-config-mirror.md](cloudflare
 
 Client order (hardcoded + embedded `sources`):
 
-1. `https://iranvpn-config.goldmannllc.com/server-list.json` (Cloudflare Worker; DNS exists only after the custom domain is attached)
+1. `https://iranvpn-config.goldmannllc.com/server-list.json` (Cloudflare Worker, custom domain attached)
 2. GitHub raw
 3. jsDelivr
 
@@ -56,9 +56,8 @@ export MIRROR_URL=https://your-mirror.example/config.json
 export CF_R2=1   # uploads to R2 for the Worker (after bucket + wrangler login)
 ./dist-config/publish.sh
 
-# First-time Worker deploy
+# Worker deploy (custom domain is already on the zone)
 cd cloudflare/config-mirror && npx wrangler deploy
-# Then attach custom domain iranvpn-config.goldmannllc.com in the Dashboard
 ```
 
 Sign server lists when a production Ed25519 key is configured (`core/src/bootstrap.rs`).

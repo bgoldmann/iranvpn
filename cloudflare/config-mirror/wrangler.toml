@@ -14,15 +14,13 @@ compatibility_date = "2024-11-01"
 pattern = "iranvpn-config.goldmannllc.com"
 custom_domain = true
 
-# After first deploy, Workers URL looks like:
-#   https://iranvpn-config.<your-subdomain>.workers.dev/server-list.json
-# Set that (or your custom domain) in client bootstrap sources.
+# workers.dev fallback (custom domain above is what clients use):
+#   https://iranvpn-config.<account>.workers.dev/server-list.json
 
 [vars]
 # Upstream when R2 object is missing (GitHub raw).
 UPSTREAM_URL = "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json"
 
-# Uncomment after: wrangler r2 bucket create iranvpn-config
-# [[r2_buckets]]
-# binding = "CONFIG_BUCKET"
-# bucket_name = "iranvpn-config"
+[[r2_buckets]]
+binding = "CONFIG_BUCKET"
+bucket_name = "iranvpn-config"

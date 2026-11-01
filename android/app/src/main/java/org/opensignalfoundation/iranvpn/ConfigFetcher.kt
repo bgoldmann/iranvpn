@@ -7,19 +7,22 @@ import org.opensignalfoundation.iranvpn.model.ConfigSource
 import org.opensignalfoundation.iranvpn.model.PathConfig
 import org.opensignalfoundation.iranvpn.model.ServerList
 import java.io.File
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
+import kotlin.concurrent.thread
 
 /**
- * Bootstrap: last-good → network → embedded.
- * Offline-first on purpose (censored nets can't reach GitHub before a tunnel is up).
- * Remote refresh after SOCKS is the client's job once connected.
+ * Bootstrap: last-good → embedded. No clearnet fetch before Connect.
+ * After SOCKS is up, [refreshInBackground] pulls the published list and keeps
+ * any locally imported paths the publish does not already contain.
  */
 object ConfigFetcher {
     private const val LAST_GOOD_FILE = "last_good_server_list.json"
 
     private val defaultSources = listOf(
-        // Deploy: docs/cloudflare-config-mirror.md (Workers + optional custom domain).
+        // Same order as core/src/bootstrap.rs and dist-config/server-list.json.
         ConfigSource(
             url = "https://iranvpn-config.goldmannllc.com/server-list.json",
             label = "Mirror (Cloudflare Worker)",
@@ -42,29 +45,62 @@ object ConfigFetcher {
         )
     }
 
-    fun fetch(
-        sources: List<ConfigSource> = defaultSources,
-        context: Context? = null,
-    ): Result<ServerList> {
-        return runCatching {
-            context?.let { loadLastGood(it) }?.takeIf { it.paths.isNotEmpty() }?.let {
-                return@runCatching it
-            }
-            if (Native.isAvailable()) {
-                val arr = JSONArray()
-                sources.forEach { s ->
-                    arr.put(JSONObject().apply {
-                        put("url", s.url)
-                        put("label", s.label)
-                    })
-                }
-                ServerList.fromJson(Native.fetchServerList(arr.toString()))
-            } else {
-                fetchViaHttp(sources)
-            }
-        }.recoverCatching {
-            context?.let { loadLastGood(it) } ?: embeddedBootstrap()
+    fun fetch(context: Context? = null): Result<ServerList> {
+        val list = context?.let { loadLastGood(it) }?.takeIf { it.paths.isNotEmpty() }
+            ?: embeddedBootstrap()
+        return Result.success(list)
+    }
+
+    /**
+     * Fetch the published list through the local SOCKS port and save a merge.
+     * Published paths win. A Psiphon personal compartment and any imported path
+     * type the publish does not include are kept.
+     */
+    fun refreshInBackground(context: Context, socksPort: Int) {
+        if (socksPort <= 0) return
+        val appContext = context.applicationContext
+        thread(name = "config-refresh", isDaemon = true) {
+            val fresh = refreshViaSocks(socksPort) ?: return@thread
+            val local = loadLastGood(appContext)
+            saveLastGood(appContext, merge(local, fresh))
         }
+    }
+
+    fun merge(local: ServerList?, fresh: ServerList): ServerList {
+        val compartment = local?.paths
+            ?.filterIsInstance<PathConfig.PsiphonConfig>()
+            ?.firstOrNull()
+            ?.inproxyClientPersonalCompartmentId
+        val freshKinds = fresh.paths.map { it.kind() }.toSet()
+        val published = fresh.paths.map { path ->
+            if (
+                path is PathConfig.PsiphonConfig &&
+                path.inproxyClientPersonalCompartmentId.isNullOrBlank() &&
+                !compartment.isNullOrBlank()
+            ) {
+                path.copy(inproxyClientPersonalCompartmentId = compartment)
+            } else {
+                path
+            }
+        }
+        val extras = local?.paths.orEmpty().filter { path ->
+            path !is PathConfig.PsiphonConfig && path.kind() !in freshKinds
+        }
+        val sources = fresh.sources.ifEmpty { local?.sources.orEmpty() }
+        return ServerList(paths = published + extras, sources = sources)
+    }
+
+    private fun refreshViaSocks(socksPort: Int): ServerList? {
+        val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort))
+        for (source in defaultSources) {
+            try {
+                val list = ServerList.fromJson(fetchUrl(source.url, proxy))
+                if (list.paths.isNotEmpty()) return list
+            } catch (_: Exception) {
+                continue
+            }
+        }
+        return null
     }
 
     fun saveLastGood(context: Context, list: ServerList) {
@@ -93,28 +129,30 @@ object ConfigFetcher {
             )
         }
         obj.put("paths", paths)
-        obj.put("sources", JSONArray())
+        val sources = JSONArray()
+        for (s in list.sources) {
+            val o = JSONObject().put("url", s.url)
+            if (!s.label.isNullOrEmpty()) o.put("label", s.label)
+            sources.put(o)
+        }
+        obj.put("sources", sources)
         return obj.toString()
     }
 
-    private fun fetchViaHttp(sources: List<ConfigSource>): ServerList {
-        for (source in sources) {
-            try {
-                return ServerList.fromJson(fetchUrl(source.url))
-            } catch (_: Exception) {
-                continue
-            }
-        }
-        throw RuntimeException("all config sources failed")
-    }
-
-    private fun fetchUrl(url: String): String {
-        val conn = URL(url).openConnection() as HttpsURLConnection
+    private fun fetchUrl(url: String, proxy: Proxy): String {
+        val conn = URL(url).openConnection(proxy) as HttpsURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 10_000
         conn.requestMethod = "GET"
+        conn.instanceFollowRedirects = true
+        conn.setRequestProperty("User-Agent", "IranVPN/1.0")
+        conn.setRequestProperty("Accept-Encoding", "identity")
         conn.connect()
-        if (conn.responseCode != 200) throw RuntimeException("HTTP ${conn.responseCode}")
-        return conn.inputStream.bufferedReader().use { it.readText() }
+        try {
+            if (conn.responseCode != 200) throw RuntimeException("HTTP ${conn.responseCode}")
+            return conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
     }
 }

@@ -186,6 +186,7 @@ class VpnTunnelService : VpnService() {
                     if (listToSave != null) {
                         ConfigFetcher.saveLastGood(this@VpnTunnelService, listToSave)
                     }
+                    ConfigFetcher.refreshInBackground(applicationContext, socksPort)
                     updateNotification("Connected via $activePathName")
                     startHealthLoop(socksPort)
                 }

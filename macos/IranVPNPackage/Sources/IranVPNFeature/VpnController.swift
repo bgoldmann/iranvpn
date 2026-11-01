@@ -85,6 +85,11 @@ final class VpnController {
                 } else {
                     cfg.removeValue(forKey: "share_link")
                 }
+                if let serverListURL = ServerListClient.cachedPsiphonServerListURL() {
+                    cfg["psiphon_server_list_url"] = serverListURL
+                } else {
+                    cfg.removeValue(forKey: "psiphon_server_list_url")
+                }
                 if let compartment = UserDefaults.standard.string(forKey: "conduitPersonalCompartment"),
                    !compartment.isEmpty
                 {
@@ -231,8 +236,12 @@ final class VpnController {
     private func apply(status: NEVPNStatus) {
         switch status {
         case .connected:
+            let becameConnected = !isConnected
             isConnected = true
             isConnecting = false
+            if becameConnected {
+                Task { await ServerListClient.refresh() }
+            }
         case .connecting, .reasserting:
             isConnecting = true
             isConnected = false

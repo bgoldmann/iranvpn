@@ -13,14 +13,21 @@ const JSON_HEADERS = {
 function notFound() {
   return new Response(JSON.stringify({ error: "not_found" }), {
     status: 404,
-    headers: { "content-type": "application/json", "access-control-allow-origin": "*" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+    },
   });
 }
 
 function isServerList(text) {
   try {
     const data = JSON.parse(text);
-    return !!data && Array.isArray(data.paths);
+    // Raw server list, or a signed envelope whose payload is one.
+    const list = data && Array.isArray(data.paths) ? data : data && data.payload;
+    if (!list || !Array.isArray(list.paths) || list.paths.length === 0) return false;
+    return list.paths.every((p) => p && typeof p.type === "string" && p.type.length > 0);
   } catch {
     return false;
   }
@@ -36,7 +43,11 @@ function jsonResponse(body, source) {
 function badGateway(error) {
   return new Response(JSON.stringify({ error }), {
     status: 502,
-    headers: { "content-type": "application/json", "access-control-allow-origin": "*" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "access-control-allow-origin": "*",
+    },
   });
 }
 
@@ -53,9 +64,11 @@ async function fromUpstream(env) {
   const upstream =
     env.UPSTREAM_URL ||
     "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json";
+  // Do not cache the subrequest. A bad GitHub body would otherwise stick for
+  // cacheTtl and turn into 60s of 502s. The response we return sets max-age itself.
   const resp = await fetch(upstream, {
     headers: { "user-agent": "IranVPN-ConfigMirror/1.0" },
-    cf: { cacheTtl: 60, cacheEverything: true },
+    cf: { cacheTtl: 0 },
   });
   if (!resp.ok) return null;
   const body = await resp.text();
@@ -76,7 +89,10 @@ export default {
     }
 
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response("method not allowed", { status: 405 });
+      return new Response("method not allowed", {
+        status: 405,
+        headers: { "cache-control": "no-store" },
+      });
     }
 
     const { pathname } = new URL(request.url);

@@ -59,10 +59,17 @@ final class VpnController {
     }
 
     private var preferredTunnelBundleId: String {
-        if xrayExtensionAvailable, let link = importedShareLink, !link.isEmpty {
+        if xrayExtensionAvailable, let link = activeShareLink, !link.isEmpty {
             return xrayTunnelBundleId
         }
         return psiphonTunnelBundleId
+    }
+
+    /// User import wins. Otherwise a share link published in the last good server list.
+    private var activeShareLink: String? {
+        let user = importedShareLink?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let user, !user.isEmpty { return user }
+        return ServerListClient.cachedXrayShareLink()
     }
 
     init() {
@@ -104,7 +111,11 @@ final class VpnController {
     func connect() async {
         errorMessage = nil
         if networkExtensionDenied {
+            #if targetEnvironment(simulator)
+            errorMessage = Self.simulatorUnavailableMessage
+            #else
             errorMessage = Self.networkExtensionSetupMessage
+            #endif
             return
         }
         connectGeneration += 1
@@ -113,6 +124,7 @@ final class VpnController {
         isConnected = false
         activePath = nil
         do {
+            let link = activeShareLink
             let bundleId = preferredTunnelBundleId
             // Stop the other path's tunnel if it is still up.
             try await stopOtherTunnels(except: bundleId)
@@ -122,10 +134,15 @@ final class VpnController {
             manager.isEnabled = true
             if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol {
                 var providerConfig = proto.providerConfiguration ?? [:]
-                if let link = importedShareLink, !link.isEmpty {
+                if let link, !link.isEmpty {
                     providerConfig["share_link"] = link
                 } else {
                     providerConfig.removeValue(forKey: "share_link")
+                }
+                if let serverListURL = ServerListClient.cachedPsiphonServerListURL() {
+                    providerConfig["psiphon_server_list_url"] = serverListURL
+                } else {
+                    providerConfig.removeValue(forKey: "psiphon_server_list_url")
                 }
                 if let compartment = UserDefaults.standard.string(forKey: "conduitPersonalCompartment"),
                    !compartment.isEmpty
@@ -151,8 +168,7 @@ final class VpnController {
 
             try manager.connection.startVPNTunnel()
             installStatusObserverIfNeeded()
-            let intendedPath =
-                (xrayExtensionAvailable && importedShareLink?.isEmpty == false) ? "Xray" : "Psiphon"
+            let intendedPath = bundleId == xrayTunnelBundleId ? "Xray" : "Psiphon"
 
             var sawActivity = false
             for i in 0..<120 {
@@ -283,8 +299,12 @@ final class VpnController {
     private func apply(status: NEVPNStatus) {
         switch status {
         case .connected:
+            let becameConnected = !isConnected
             isConnected = true
             isConnecting = false
+            if becameConnected {
+                Task { await ServerListClient.refresh() }
+            }
         case .connecting, .reasserting:
             isConnecting = true
             isConnected = false

@@ -10,7 +10,7 @@ Iranian DPI often burns stable VLESS/WS+CDN domains; keep **Psiphon first**.
 1. From **R2** (`CONFIG_BUCKET` / key `server-list.json`) when bound  
 2. Else **proxies** GitHub raw (`UPSTREAM_URL`) with short CDN cache  
 
-Clients try this Worker **first**, then GitHub raw, then jsDelivr. The hostname does not resolve until the custom domain below is attached; until then clients fail over (DNS failure is fast).
+Clients try this Worker **first**, then GitHub raw, then jsDelivr. The custom domain `iranvpn-config.goldmannllc.com` is attached and serves the list. A body that is not a server list (missing `paths`, empty `paths`, or no `type` on a path) is not served; the client then tries the next source.
 
 ## Deploy
 
@@ -33,13 +33,14 @@ Then keep client sources pointing at:
 
 `https://iranvpn-config.goldmannllc.com/server-list.json`
 
-### Optional R2 (publish without waiting on GitHub)
+### R2
+
+The Worker is bound to the `iranvpn-config` bucket and serves `server-list.json` from R2 when that object is a server list. A missing or invalid object falls through to GitHub.
 
 ```bash
-npx wrangler r2 bucket create iranvpn-config
-# Uncomment [[r2_buckets]] in wrangler.toml, redeploy
+npx wrangler r2 bucket create iranvpn-config   # already created
 npm run publish-r2
-# or: dist-config/publish.sh with CF_R2 enabled (see publish.sh)
+# or: CF_R2=1 ../../dist-config/publish.sh
 ```
 
 ## Client wiring

@@ -57,6 +57,7 @@ object ConnectivityProbe {
                 requestMethod = "GET"
                 instanceFollowRedirects = true
                 setRequestProperty("User-Agent", "IranVPN/1.0")
+                setRequestProperty("Accept-Encoding", "identity")
             }
             try {
                 conn.connect()
