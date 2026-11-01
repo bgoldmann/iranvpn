@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+### Cloudflare control plane
+
+- **Config mirror Worker** (`cloudflare/config-mirror/`): serves `server-list.json` from R2 or GitHub upstream; clients prefer `https://iranvpn-config.goldmannllc.com/server-list.json`.
+- **Multi-probe gate:** Android, core, iOS, and macOS try Cloudflare trace, then `gstatic` `generate_204` (must be HTTP 204), then Firefox `success.txt`. A Cloudflare-only failure does not fail Connect. A 200 block page does not count as success. Apple sends the probe hostname through SOCKS5.
+- **Publish:** `dist-config/publish.sh` supports `CF_R2=1`; see `docs/cloudflare-config-mirror.md`.
+
 ## [4.0.0] — 2026-10-19
 
 ### Anti-filter VPN rebuild

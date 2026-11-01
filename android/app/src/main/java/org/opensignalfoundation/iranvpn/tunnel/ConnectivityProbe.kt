@@ -20,14 +20,31 @@ object ConnectivityProbe {
     const val DEFAULT_TOKEN_SUBSTRING = "ip="
     private const val TIMEOUT_MS = 8_000
 
+    private data class ProbeTarget(
+        val url: String,
+        val token: String,
+        val expectedStatus: Int?,
+        val timeoutMs: Int,
+    )
+
+    // Keep in sync with core/src/probe.rs. Later targets are not Cloudflare:
+    // 1.1.1.1 and cp.cloudflare.com fail together with the primary.
+    private val probeTargets = listOf(
+        ProbeTarget(DEFAULT_PROBE_URL, DEFAULT_TOKEN_SUBSTRING, null, TIMEOUT_MS),
+        ProbeTarget("https://www.gstatic.com/generate_204", "", 204, 4_000),
+        ProbeTarget("https://detectportal.firefox.com/success.txt", "success", null, 4_000),
+    )
+
     /**
-     * Fetch [url] via SOCKS5 at 127.0.0.1:[socksPort] and require [token] in the body.
-     * Returns Result.success on match; failure otherwise.
+     * Fetch [url] via SOCKS5 at 127.0.0.1:[socksPort] and require [token] in the body
+     * (empty [token] = any 2xx success, unless [expectedStatus] is set).
      */
     fun probeThroughSocks(
         socksPort: Int,
         url: String = DEFAULT_PROBE_URL,
         token: String = DEFAULT_TOKEN_SUBSTRING,
+        expectedStatus: Int? = null,
+        timeoutMs: Int = TIMEOUT_MS,
     ): Result<Unit> {
         if (socksPort <= 0) {
             return Result.failure(IllegalStateException("no SOCKS port"))
@@ -35,25 +52,40 @@ object ConnectivityProbe {
         return runCatching {
             val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress("127.0.0.1", socksPort))
             val conn = (URL(url).openConnection(proxy) as HttpsURLConnection).apply {
-                connectTimeout = TIMEOUT_MS
-                readTimeout = TIMEOUT_MS
+                connectTimeout = timeoutMs
+                readTimeout = timeoutMs
                 requestMethod = "GET"
                 instanceFollowRedirects = true
                 setRequestProperty("User-Agent", "IranVPN/1.0")
             }
             try {
                 conn.connect()
-                if (conn.responseCode !in 200..299) {
-                    error("probe HTTP ${conn.responseCode}")
+                val code = conn.responseCode
+                if (expectedStatus != null) {
+                    if (code != expectedStatus) error("probe HTTP $code, want $expectedStatus")
+                } else if (code !in 200..299) {
+                    error("probe HTTP $code")
                 }
-                val body = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
-                if (!body.contains(token)) {
-                    error("probe token missing")
+                if (token.isNotEmpty()) {
+                    val body = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                    if (!body.contains(token)) {
+                        error("probe token missing")
+                    }
                 }
             } finally {
                 conn.disconnect()
             }
         }
+    }
+
+    /** Cloudflare trace, then non-Cloudflare checks, so a CF-only failure does not fail Connect. */
+    fun probeDefault(socksPort: Int): Result<Unit> {
+        var last: Result<Unit> = Result.failure(IllegalStateException("no probes"))
+        for (t in probeTargets) {
+            last = probeThroughSocks(socksPort, t.url, t.token, t.expectedStatus, t.timeoutMs)
+            if (last.isSuccess) return last
+        }
+        return last
     }
 
     /** Quick TCP check that SOCKS is accepting connections. */

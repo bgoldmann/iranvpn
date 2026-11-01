@@ -6,8 +6,9 @@ embedded Psiphon bootstrap and a last-good cache.
 
 ## Sources
 
-- **Primary:** GitHub raw / S3
-- **Mirror:** jsDelivr or second domain
+- **Cloudflare Worker:** `https://iranvpn-config.goldmannllc.com/server-list.json` (see [docs/cloudflare-config-mirror.md](../docs/cloudflare-config-mirror.md))
+- **GitHub raw** / optional S3
+- **jsDelivr** CDN mirror
 - **Optional:** IPFS / community mirror
 
 ## Format
@@ -36,8 +37,9 @@ Optional signed envelope (when Ed25519 verify key is set in the client):
 ## Scripts
 
 ```bash
-export S3_BUCKET=my-vpn-config
-export MIRROR_URL=https://mirror.example.com/config.json
+export S3_BUCKET=my-vpn-config          # optional
+export MIRROR_URL=https://mirror.example.com/config.json  # optional
+export CF_R2=1                          # optional: push to Cloudflare R2
 ./publish.sh [server-list.json]
 ```
 

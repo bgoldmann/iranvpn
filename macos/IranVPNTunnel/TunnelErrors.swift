@@ -10,7 +10,7 @@ enum TunnelError: LocalizedError {
         case .pathUnavailable:
             return "No tunnel path available"
         case .probeFailed:
-            return "Connectivity probe failed"
+            return "Connectivity probe failed — tunnel did not reach the internet"
         case .libXray(let message):
             return "LibXray: \(message)"
         }

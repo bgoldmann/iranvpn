@@ -39,12 +39,26 @@ Plan: TestFlight (limited) + sideload / notarized DMG + IPA mirrors.
 
 ## Config mirrors
 
-See [dist-config/](../dist-config/). Publish with:
+See [dist-config/](../dist-config/) and [cloudflare-config-mirror.md](cloudflare-config-mirror.md).
+
+Client order (hardcoded + embedded `sources`):
+
+1. `https://iranvpn-config.goldmannllc.com/server-list.json` (Cloudflare Worker; DNS exists only after the custom domain is attached)
+2. GitHub raw
+3. jsDelivr
+
+Publish:
 
 ```bash
+# Optional S3 / HTTP mirror / R2
 export S3_BUCKET=...
 export MIRROR_URL=https://your-mirror.example/config.json
+export CF_R2=1   # uploads to R2 for the Worker (after bucket + wrangler login)
 ./dist-config/publish.sh
+
+# First-time Worker deploy
+cd cloudflare/config-mirror && npx wrangler deploy
+# Then attach custom domain iranvpn-config.goldmannllc.com in the Dashboard
 ```
 
 Sign server lists when a production Ed25519 key is configured (`core/src/bootstrap.rs`).

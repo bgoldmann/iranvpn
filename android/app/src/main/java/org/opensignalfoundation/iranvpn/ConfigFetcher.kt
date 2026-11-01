@@ -19,13 +19,18 @@ object ConfigFetcher {
     private const val LAST_GOOD_FILE = "last_good_server_list.json"
 
     private val defaultSources = listOf(
+        // Deploy: docs/cloudflare-config-mirror.md (Workers + optional custom domain).
+        ConfigSource(
+            url = "https://iranvpn-config.goldmannllc.com/server-list.json",
+            label = "Mirror (Cloudflare Worker)",
+        ),
         ConfigSource(
             url = "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json",
-            label = "Primary"
+            label = "Primary (GitHub)",
         ),
         ConfigSource(
             url = "https://cdn.jsdelivr.net/gh/bgoldmann/iranvpn@main/dist-config/server-list.json",
-            label = "Mirror"
+            label = "Mirror (jsDelivr)",
         ),
     )
 

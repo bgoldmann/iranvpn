@@ -4,6 +4,10 @@
   ],
   "sources": [
     {
+      "url": "https://iranvpn-config.goldmannllc.com/server-list.json",
+      "label": "Mirror (Cloudflare Worker)"
+    },
+    {
       "url": "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json",
       "label": "Primary (GitHub)"
     },

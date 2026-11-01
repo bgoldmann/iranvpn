@@ -31,7 +31,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw TunnelError.pathUnavailable
         }
 
-        guard await probeSocksReady(port: socksPort) else {
+        guard await probeSocksReady(port: socksPort),
+              await TunnelConnectivityProbe.probe(socksPort: socksPort) else {
             throw TunnelError.probeFailed
         }
 

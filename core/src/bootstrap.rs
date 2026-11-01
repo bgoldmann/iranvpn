@@ -115,6 +115,11 @@ pub fn resolve_bootstrap(cache_dir: Option<&Path>) -> ServerList {
 pub fn default_config_sources() -> Vec<ConfigSource> {
     vec![
         ConfigSource {
+            // Cloudflare Worker mirror — see docs/cloudflare-config-mirror.md
+            url: "https://iranvpn-config.goldmannllc.com/server-list.json".to_string(),
+            label: Some("Mirror (Cloudflare Worker)".to_string()),
+        },
+        ConfigSource {
             url: "https://raw.githubusercontent.com/bgoldmann/iranvpn/main/dist-config/server-list.json"
                 .to_string(),
             label: Some("Primary (GitHub)".to_string()),
@@ -145,5 +150,22 @@ mod tests {
     fn resolve_without_cache() {
         let list = resolve_bootstrap(None);
         assert!(!list.paths.is_empty());
+    }
+
+    #[test]
+    fn dist_server_list_matches_hardcoded_sources() {
+        let json = include_str!("../../dist-config/server-list.json");
+        let list = parse_server_list_json(json).expect("dist server-list");
+        assert!(matches!(
+            list.paths.first(),
+            Some(crate::config::PathConfig::Psiphon { .. })
+        ));
+        let defaults = default_config_sources();
+        assert_eq!(list.sources.len(), defaults.len());
+        for (from_file, hardcoded) in list.sources.iter().zip(defaults.iter()) {
+            assert_eq!(from_file.url, hardcoded.url);
+            assert_eq!(from_file.label, hardcoded.label);
+        }
+        assert!(defaults[0].url.contains("iranvpn-config.goldmannllc.com"));
     }
 }

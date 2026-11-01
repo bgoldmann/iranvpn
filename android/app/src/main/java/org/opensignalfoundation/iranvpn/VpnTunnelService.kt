@@ -145,7 +145,7 @@ class VpnTunnelService : VpnService() {
                     return@fold
                 }
                 val probeStart = System.currentTimeMillis()
-                val probe = ConnectivityProbe.probeThroughSocks(socksPort)
+                val probe = ConnectivityProbe.probeDefault(socksPort)
                 val probeRtt = System.currentTimeMillis() - probeStart
                 if (probe.isFailure) {
                     LocalFailureLog.record(
@@ -314,7 +314,7 @@ class VpnTunnelService : VpnService() {
                 }
                 if (!running || !isConnected) break
                 val port = (activeRunner as? SocksProxyProvider)?.getLocalSocksPort() ?: socksPort
-                val probe = ConnectivityProbe.probeThroughSocks(port)
+                val probe = ConnectivityProbe.probeDefault(port)
                 if (probe.isFailure) {
                     failures++
                     android.util.Log.w(TAG, "health probe failed ($failures): ${probe.exceptionOrNull()?.message}")

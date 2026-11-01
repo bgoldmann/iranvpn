@@ -82,6 +82,7 @@ flowchart LR
 | [`windows/`](windows/) | Rust + egui · local SOCKS (system Wintun deferred) |
 | [`station/`](station/) | Volunteer P2P / Conduit-style relay helpers |
 | [`dist-config/`](dist-config/) | Bootstrap server-list distribution |
+| [`cloudflare/config-mirror/`](cloudflare/config-mirror/) | Worker that mirrors `server-list.json` (control plane) |
 | [`report-iran-vpn-2026/`](report-iran-vpn-2026/) | Research report |
 | [`docs/`](docs/) | Legal, protocol notes, [store publish guide](docs/store-publish-guide.md) |
 | [`assets/branding/`](assets/branding/) | App icon & logo |
@@ -163,6 +164,7 @@ Details: [`ios/README.md`](ios/README.md) · Store listing copy: [`docs/store-pu
 | [Store publish guide](docs/store-publish-guide.md) | App Store & Play titles, keywords, URLs |
 | [Psiphon integration](docs/psiphon-integration.md) | NE entitlements, bundled config, Psiphon Inc keys |
 | [Distribution](docs/distribution.md) | Config publishing |
+| [Cloudflare config mirror](docs/cloudflare-config-mirror.md) | Worker + R2 deploy for `server-list.json` |
 
 ### Research report chapters
 

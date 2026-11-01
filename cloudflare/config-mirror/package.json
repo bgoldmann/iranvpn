@@ -1,0 +1,13 @@
+{
+  "name": "iranvpn-config-mirror",
+  "private": true,
+  "description": "Cloudflare Worker mirror for IranVPN server-list.json",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "publish-r2": "wrangler r2 object put iranvpn-config/server-list.json --file=../../dist-config/server-list.json"
+  },
+  "devDependencies": {
+    "wrangler": "^3.99.0"
+  }
+}

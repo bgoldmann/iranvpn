@@ -1,6 +1,8 @@
 # Build / deps
 target/
 **/build/
+**/node_modules/
+**/.wrangler/
 **/.gradle/
 **/.cxx/
 **/DerivedData/

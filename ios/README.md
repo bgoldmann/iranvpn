@@ -35,7 +35,7 @@ Conduit **station** (volunteer) is not available on iOS from Psiphon.
 
 ## Probe and kill switch
 
-`PacketTunnelProvider` requires a live SOCKS port and a TCP probe before installing network settings. Without a forwarder, packets are dropped (kill switch) — not leaked to the ISP.
+`PacketTunnelProvider` requires a live SOCKS port, then the same HTTPS probe as Android and core (Cloudflare trace, Google `generate_204`, Firefox `success.txt`) before installing network settings. Without a forwarder, packets are dropped (kill switch) — not leaked to the ISP.
 
 ## Capabilities
 

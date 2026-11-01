@@ -12,7 +12,7 @@ SwiftUI app + `IranVPNTunnel` Network Extension (Psiphon). Same probe + PAC SOCK
 
 ## Tunnel behavior
 
-- Starts embedded Psiphon → local SOCKS → TCP probe → `SocksNetworkSettings` PAC to `127.0.0.1:<port>`.
+- Starts embedded Psiphon → local SOCKS → TCP check → HTTPS probe (Cloudflare trace, Google `generate_204`, Firefox `success.txt`) → `SocksNetworkSettings` PAC to `127.0.0.1:<port>`.
 - Packet flow is drained (kill-switch); TCP is forwarded via PAC, not a drop-only TUN claim without SOCKS.
 
 ## Providers on macOS
